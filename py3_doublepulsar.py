@@ -5,6 +5,7 @@ import socket
 import struct
 import threading
 
+#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
 class NewSMBPacket(Structure):
     structure = (
         ('Signature', '"\xffSMB'),
@@ -57,7 +58,7 @@ class SMBTransaction2Secondary_Data(Structure):
         ('Trans_Data',':'),
     )
     
-    
+#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
 def addCommand(self, command):
   if len(self['Data']) == 0:
     self['Command'] = command.command
@@ -80,6 +81,28 @@ def calculate_doublepulsar_arch(s):
     else:
         return "x64 (64-bit)"
 
+#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
+def logoff(self):
+        smb = NewSMBPacket()
+
+        logOff = SMBCommand(SMB.SMB_COM_LOGOFF_ANDX)
+        logOff['Parameters'] = SMBLogOffAndX()
+        smb.addCommand(logOff)
+
+        self.sendSMB(smb)
+        self.recvSMB()
+        # Let's clear some fields so you can login again under the same session
+        self._uid = 0
+
+#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
+def disconnect_tree(self, tid):
+        smb = NewSMBPacket()
+        smb['Tid']  = tid
+
+        smb.addCommand(SMBCommand(SMB.SMB_COM_TREE_DISCONNECT))
+
+        self.sendSMB(smb)
+        self.recvSMB()
 
 if __name__ == "__main__":
     # Packets
@@ -212,6 +235,11 @@ if __name__ == "__main__":
         #conn.sendSMB(doublepulsar_pkt)
         s.send(doublepulsar_pkt)
         
-        #send logoff
-        
         #send disconnect
+        conn.disconnect_tree(tid)
+
+        #send logoff
+	conn.logoff()
+
+	#close connection
+	s.close()
