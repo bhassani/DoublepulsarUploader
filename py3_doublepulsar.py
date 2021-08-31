@@ -5,6 +5,9 @@ import socket
 import struct
 import threading
 
+#for XOR decryption
+from itertools import cycle, izip
+
 #https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
 class NewSMBPacket(Structure):
     structure = (
@@ -103,6 +106,11 @@ def disconnect_tree(self, tid):
 
         self.sendSMB(smb)
         self.recvSMB()
+
+#same as XOR_Decrypt
+def xor_encrypt(message, key):
+	return ''.join(chr(ord(c) ^ ord(k)) for c, k in izip(message, cycle(key)))
+
 
 if __name__ == "__main__":
     # Packets
