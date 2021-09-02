@@ -39,8 +39,59 @@ namespace DoublePulsar
             public ushort UID;
             public ushort MID;
         }
+        
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        public struct SMB_COM_TREE_CONNECT_ANDX_REQUEST
+        {
+            public byte WordCount;
+            public byte AndXCommand;
+            public byte AndXReserved;
+            public ushort AndXOffset;
+            public ushort Flags;
+            public ushort PasswordLength;
+            public ushort ByteCount;
+            //SMBData added manually
+        }
 
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+	    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        public struct SMB_COM_SESSION_SETUP_ANDX_RESPONSE
+        {
+            public byte WordCount;
+            public byte AndxCommand;
+            public byte reserved;
+            public ushort AndxOffset;
+            public ushort action;
+            public ushort ByteCount;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        public struct SMB_COM_SESSION_SETUP_ANDX_REQUEST
+        {
+            public byte WordCount;
+            public byte AndxCommand;
+            public byte reserved1;
+            public ushort AndxOffset;
+            public ushort MaxBuffer;
+            public ushort MaxMpxCount;
+            public ushort VcNumber;
+            public uint SessionKey;
+            public ushort OEMPasswordLen;
+            public ushort UnicodePasswordLen;
+            public uint Reserved2;
+            public uint Capabilities;
+            public ushort ByteCount;
+            //SMB Data added manually
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        public struct SMB_COM_NEGOTIATE_REQUEST
+        {
+            public byte WordCount;
+            public ushort ByteCount;
+            //Dialects are added manually
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct SMB_COM_TRANSACTION2_SECONDARY_REQUEST
         {
             public byte WordCount;
