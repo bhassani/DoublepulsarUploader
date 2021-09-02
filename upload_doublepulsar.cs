@@ -6,7 +6,11 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 
-//https://github.com/povlteksttv/Eternalblue/blob/master/Eternalblue/Program.cs
+/* Sources used: 
+https://github.com/povlteksttv/Eternalblue/blob/master/Eternalblue/Program.cs
+https://github.com/HynekPetrak/doublepulsar-detection-csharp/blob/master/DoublepulsarDetectionLib/DetectDoublePulsar.cs
+https://github.com/DeadmanLabs/EternalBlueScanner/blob/master/EternalBlue_Scanner/EternalBlue_Scanner/EternalBlueToolkit.cs
+*/
 namespace DoublePulsar
 {
     class Program
