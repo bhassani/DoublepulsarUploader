@@ -302,6 +302,23 @@ static public byte[] MakeKernelShellcode()
             return arr;
         }
         
+        UInt32 LE2INT(byte[] data) {
+            UInt32 b;
+            b = data[3];
+            b <<= 8;
+            b += data[2];
+            b <<= 8;
+            b += data[1];
+            b <<= 8;
+            b += data[0];
+            return b;
+        }
+
+        public byte[] Slice(byte[] data, int index, int length) {
+            byte[] result = new byte[length];
+            Array.Copy(data, index, result, 0, length);
+            return result;
+        }
         
         UInt32 calculate_doublepulsar_xor_key(UInt32 s) {
             UInt32 x;
