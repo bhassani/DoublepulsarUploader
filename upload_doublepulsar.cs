@@ -97,14 +97,23 @@ namespace DoublePulsar
             public byte WordCount;
             public ushort TotalParameterCount;
             public ushort TotalDataCount;
-            public ushort ParameterCount;
-            public ushort ParameterOffset;
-            public ushort ParameterDisplacement;
-            public ushort DataCout;
-            public ushort DataOffset;
-            public ushort DataDisplacement;
-            public ushort FID;
+            public ushort MaxParameterCount;
+            public ushort MaxDataCount;
+	    public byte MaxSetupCount;
+	    public byte Reserved;
+	    public ushort Flags;
+	    public uint Timeout;
+	    public ushort Reserved2;
+	    public ushort ParamterCount;
+	    public ushort ParameterOffset;
+	    public ushort DataCount;
+	    public ushort DataOffset;
+	    public byte setupcount;
+	    public byte reserved3;
+	    public ushort subcommand;
             public ushort ByteCount;
+            public byte padding;
+	    //Parameters added manually
             //SMBData added manually
         }
    }
