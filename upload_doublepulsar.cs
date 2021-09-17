@@ -147,17 +147,31 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
 
             SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
             {
-                WordCount = 0x09,
-                TotalParameterCount = 0x0102,
-                TotalDataCount = 0x1000,
-                ParameterCount = 0x0000,
-                ParameterOffset = 0x0000,
-                ParameterDisplacement = 0x0000,
-                DataCout = 0x1000,
-                DataOffset = 0x0035,
-                DataDisplacement = 0x0000, //we change this with our timeout int later
-                FID = 0x0000,
-                ByteCount = 0x1000
+		WordCount = 15,
+		TotalParameterCount = 12,
+		TotalDataCount = 0x1000,
+		MaxParameterCount = 1;
+		MaxDataCount = 0x0000,
+		MaxSetupCount = 0x00;
+		Reserved = 0x00;
+		Flags = 0x00;
+		Timeout = htons(0x001a8925); // [25,89,1a0,00]
+		Reserved = 0x00;
+		ParameterCount = 12,
+		    
+		//where in the packet is the location of the parameters
+		//(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
+		ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
+		DataCount = TotalDataCount,
+		    
+		//where in the packet is the location of the SMBDATA
+		//(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
+		DataOffset = 0x004e; // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
+		SetupCount = 1; //0x01;
+		Reserved = 0x00;
+		subcommand = htons(0x000E);
+		ByteCount = htons(TotalDataCount + 13);
+		Padding = 0x00;
             };
             
             //update timeout to be DoublePulsar EXEC command
