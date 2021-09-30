@@ -317,7 +317,8 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
         }
 	
 	static public byte[] DoublepulsarPingRequest(Socket sock, ushort UID, ushort TID)
-SMB_HEADER header = new SMB_HEADER
+	{
+	    SMB_HEADER header = new SMB_HEADER
             {
                 protocol = 0x424d53ff,
                 command = 0x32,
