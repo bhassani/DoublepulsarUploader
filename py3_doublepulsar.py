@@ -277,8 +277,9 @@ if __name__ == "__main__":
         #modified_trans2_exec_packet[32] = user_id[0]
         #modified_trans2_exec_packet[33] = user_id[1]
 
+   	#at this moment, uploading DLL files is not completed.
         #read file into memory here
-        
+        #read_dll_file_as_hex()
         
         #merge file with kernel shellcode to run payload
         #kernel shellcode is for 64 bits at the moment
