@@ -138,8 +138,6 @@ def send_trans2_ping(conn, tid):
         pkt.Flags2 = 0xc007
         pkt.Timeout = 0x0134ee00 #ping command for DoublePulsar
 
-	# assume no params
-
 	transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
 	transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
 	transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
