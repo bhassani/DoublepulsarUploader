@@ -32,10 +32,8 @@ def calculate_doublepulsar_arch(s):
     else:
         return "x64 (64-bit)"
 
-# same as XOR_Decrypt
-def xor_encrypt(message, key):
-    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
-
+def xor_encrypt(data, key):
+    return bytearray(a^b for a, b in zip(*map(bytearray, [data, key])))
 
 def read_dll_file_as_hex():
     global hex
