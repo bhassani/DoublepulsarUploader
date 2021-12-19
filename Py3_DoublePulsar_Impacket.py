@@ -10,10 +10,9 @@ from itertools import cycle
 # majority of code inspiration from worawit's win7 POC for EternalBlue
 # https://gist.github.com/worawit/bd04bad3cd231474763b873df081c09a
 
-def xor_encrypt(message, key):
-    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(message, cycle(key)))
-
-
+def xor_encrypt(data, key):
+    return bytearray(a^b for a, b in zip(*map(bytearray, [data, key
+							 ])))
 '''
 https://github.com/RiskSense-Ops/MS17-010/blob/master/payloads/x64/src/exploit/kernel.asm  
 	Name: kernel  
