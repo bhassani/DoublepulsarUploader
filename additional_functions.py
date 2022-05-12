@@ -15,9 +15,11 @@ def XOR_ENCRYPT3():
         ordinal = "%02x" % x
         cipher_payload += ''.join(ordinal)
     print(cipher_payload)
-
-        
-
+    
+    #manipulate the packet further here
+    encoded_payload = cipher_payload.encode()
+    byte_payload = bytearray(encoded_payload)
+   
 
 #https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
 def le2int(buf):
