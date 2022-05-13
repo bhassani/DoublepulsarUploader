@@ -85,7 +85,11 @@ def test_shellcode_builder():
     xor_key = "\x58\x58\x11\x62"
 
     userland_shellcode_len = str(len(userland_shellcode))
-    kernel_shellcode += userland_shellcode_len
+    
+    userland_shellcode_len = len(userland_shellcode)
+    userland_shellcode_size_str = format(userland_shellcode_len, "x")
+    
+    kernel_shellcode += userland_shellcode_size_str
     kernel_shellcode += userland_shellcode
     length = len(kernel_shellcode)
     
