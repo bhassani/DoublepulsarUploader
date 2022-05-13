@@ -123,7 +123,25 @@ def XOR_ENCRYPT3():
     #manipulate the packet further here
     encoded_payload = cipher_payload.encode()
     byte_payload = bytearray(encoded_payload)
-   
+
+'''
+for chunkStart, chunkSize in chunkify(self.file):
+            #pool.apply_async(process_wrapper, (chunkStart, chunkSize, self.file))
+        try:
+'''
+#https://github.com/iilegacyyii/PoC-CVE-2021-41773/blob/main/CVE-2021-41773.py
+def chunkify(fname,chunkSize=4096):
+    fileEnd = path.getsize(fname)
+    with open(fname,'rb') as f:
+        chunkEnd = f.tell()
+        while True:
+            chunkStart = chunkEnd
+            f.seek(chunkSize,1)
+            f.readline()
+            chunkEnd = f.tell()
+            yield chunkStart, chunkEnd - chunkStart
+            if chunkEnd > fileEnd:
+                break
 
 #https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
 def le2int(buf):
