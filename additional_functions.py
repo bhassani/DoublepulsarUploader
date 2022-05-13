@@ -84,8 +84,6 @@ def test_shellcode_builder():
     #my_str_as_bytes = str.encode(str_val)
     xor_key = "\x58\x58\x11\x62"
 
-    userland_shellcode_len = str(len(userland_shellcode))
-    
     userland_shellcode_len = len(userland_shellcode)
     userland_shellcode_size_str = format(userland_shellcode_len, "x")
     
