@@ -1,3 +1,6 @@
+# NetBIOS Session Types
+NETBIOS_SESSION_MESSAGE = 0x0
+
 class NetBIOSSessionPacket:
     def __init__(self, data=0):
         self.type = 0x0
