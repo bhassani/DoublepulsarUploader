@@ -271,7 +271,7 @@ if __name__ == "__main__":
         '''
 
         parameters_bytearray = bytearray(parameters)
-        str_xor(parameters_bytearray, array_xor_key)
+        byte_xor(parameters_bytearray, array_xor_key)
         print(parameters_bytearray)
         print(hexdump(parameters_bytearray))
         '''
