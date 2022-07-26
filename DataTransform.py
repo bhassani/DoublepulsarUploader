@@ -4,6 +4,10 @@ import binascii
 sample script to convert the XOR key to bytes to XOR encrypt the doublepulsar parameters
 '''
 
+'''
+Code from:
+https://stackoverflow.com/questions/55840052/xor-bytes-in-python3
+'''
 
 ########Attempt1
 def xor_strings(a, b):
