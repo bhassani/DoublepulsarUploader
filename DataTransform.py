@@ -31,6 +31,34 @@ def xor_with_str():
   print("xored entiresize = ", xored_entiresize.encode())
   print("xored chunksize = ", xored_chunksize.encode())
   print("xored offset = ", xored_offset.encode())
-  
+
+    
+#https://stackoverflow.com/questions/21017698/converting-int-to-bytes-in-python-3
+def attempt_two():
+    key = 89765401
+    print(hex(key))
+    
+    new_val = hex(key)
+    byte_val = bytes(new_val.encode('utf-8'))
+    print(byte_val)
+    
+    
+    entireSize= (4096).to_bytes(4, byteorder='little')
+    print(entireSize)
+    
+    chunk = (4096).to_bytes(4, byteorder='little')
+    print(chunk)
+    
+    offset = (0).to_bytes(4, byteorder='little')
+    print(offset)
+    
+    parameters = bytearray()
+    parameters += entireSize
+    parameters += chunk
+    parameters += offset
+    
+    byte_xor(parameters, byte_val)
+    
+    
 if __name__ == "__main__":
 
