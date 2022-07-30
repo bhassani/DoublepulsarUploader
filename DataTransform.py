@@ -119,6 +119,17 @@ def new_parameter_generation():
 
     print(hexdump(parameters))
 
+def doublepulsar_hex_key_to_bytes_converter():
+    signature = b'\x79\xe7\xdf\x90\x00\x00\x00\x00'
+    signature_long = struct.unpack('<Q', signature)[0]
+    key = calculate_doublepulsar_xor_key(signature_long)
+    hex_key = hex(key)
+
+    encoded_hex_key = hex_key.encode('utf-8')
+    new_hex_key = bytes(encoded_hex_key)
+    hex_val = binascii.hexlify(new_hex_key).decode('utf-8')
+    bytes_key = binascii.unhexlify(hex_val)
+    print(bytes_key)
 
 if __name__ == "__main__":
 
