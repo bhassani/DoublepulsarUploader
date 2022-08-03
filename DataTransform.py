@@ -131,5 +131,14 @@ def doublepulsar_hex_key_to_bytes_converter():
     bytes_key = binascii.unhexlify(hex_val)
     print(bytes_key)
 
+def update_netbios_length():
+    buffer_bytearray = bytearray()
+    buffer_bytearray += b'\x00' * 10
+    netbios_size = struct.pack('>H', 4174)
+    buffer_bytearray[2] = netbios_size[0]
+    buffer_bytearray[3] = netbios_size[1]
+    print(hexdump(buffer_bytearray))
+    #works as intended
+    #0x00000000  00 00 10 4e 00 00 00 00  00 00
 if __name__ == "__main__":
 
