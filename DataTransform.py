@@ -140,5 +140,15 @@ def update_netbios_length():
     print(hexdump(buffer_bytearray))
     #works as intended
     #0x00000000  00 00 10 4e 00 00 00 00  00 00
+    
+    
+#attempt 2
+#https://securityintelligence.com/posts/raspberry-robin-worm-dridex-malware/
+def bytearray_append_xor():
+    key = 0x58581162
+    encoded_bytearray = bytearray()
+    for b in shellcode:
+        dec.append(b ^ key)
+
 if __name__ == "__main__":
 
