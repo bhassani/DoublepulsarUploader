@@ -10,8 +10,16 @@ from itertools import cycle
 # majority of code inspiration from worawit's win7 POC for EternalBlue
 # https://gist.github.com/worawit/bd04bad3cd231474763b873df081c09a
 
+#don't use, but kept for historical purposes
 def xor_encrypt(data, key):
     return bytearray(a^b for a, b in zip(*map(bytearray, [data, key])))
+
+# official XOR bytes function
+def byte_xor(data, key):
+    for i in range(len(data)):
+        data[i] ^= key[i % len(key)]
+    return data
+
 
 '''
 https://github.com/RiskSense-Ops/MS17-010/blob/master/payloads/x64/src/exploit/kernel.asm  
