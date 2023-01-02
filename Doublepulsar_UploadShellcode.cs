@@ -676,6 +676,35 @@ namespace DoublePulsar
             b += data[0];
             return b;
         }
+        
+        //https://stackoverflow.com/questions/2350099/how-to-convert-an-int-to-a-little-endian-byte-array
+        /*
+        BitConverter.GetBytes(1000).Reverse<byte>().ToArray();
+        
+        OR
+        if (BitConverter.IsLittleEndian)
+        {
+            int someInteger = 100;
+            byte[] bytes = BitConverter.GetBytes(someInteger);
+            int convertedFromBytes = BitConverter.ToInt32(bytes, 0);
+        }
+        OR
+        byte[] IntToLittleEndian(int data)
+        {
+          var output = new byte[sizeof(int)];
+          BinaryPrimitives.WriteInt32LittleEndian(output, data);
+          return output;
+        }
+        */
+        public static byte[] INT2LE(int data)
+        {
+            byte[] b = new byte[4];
+            b[0] = (byte)data;
+            b[1] = (byte)(((uint)data >> 8) & 0xFF);
+            b[2] = (byte)(((uint)data >> 16) & 0xFF);
+            b[3] = (byte)(((uint)data >> 24) & 0xFF);
+            return b;
+        }
 
         public static byte[] Slice(byte[] data, int index, int length)
         {
