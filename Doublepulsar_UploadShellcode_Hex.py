@@ -176,8 +176,8 @@ if __name__ == "__main__":
 
     # Check for 0x51 response to indicate DOUBLEPULSAR infection
     if final_response[34] == 81:
-        signature = final_response[18:26]
-        signature_long = struct.unpack('<Q', signature)[0]
+        signature = final_response[18:22]
+        signature_long = struct.unpack('<I', signature)[0]
         key = calculate_doublepulsar_xor_key(signature_long)
         arch = calculate_doublepulsar_arch(signature_long)
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
