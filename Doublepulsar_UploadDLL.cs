@@ -399,9 +399,12 @@ namespace DoublePulsar
 
             List<byte> Parameters = new List<byte>();
             Parameters.AddRange(Enumerable.Repeat((byte)0x00, 12));
+            byte[] paramz = Parameters.ToArray();
+
 
             byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
             byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
+            pkt = pkt.Concat(paramz.ToArray()).ToArray();
 
             SendSMBMessage(sock, pkt, true);
             return ReceiveSMBMessage(sock);
