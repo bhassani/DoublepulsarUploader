@@ -696,7 +696,7 @@ namespace DoublePulsar
           return output;
         }
         */
-        public static byte[] INT2LE(int data)
+        public static byte[] INT2LE(UInt32 data)
         {
             byte[] b = new byte[4];
             b[0] = (byte)data;
