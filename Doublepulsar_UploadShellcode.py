@@ -203,7 +203,11 @@ if __name__ == "__main__":
         signature = final_response[18:22]
         signature_long = struct.unpack('<I', signature)[0]
         key = calculate_doublepulsar_xor_key(signature_long)
-        arch = calculate_doublepulsar_arch(signature_long)
+        
+        arch_signature = final_response[18:26]
+        arch_signature_long = struct.unpack('<Q', arch_signature)[0]
+        arch = calculate_doublepulsar_arch(arch_signature_long)
+        
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
         
         xor_key = key #hex(key) 
