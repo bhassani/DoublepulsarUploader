@@ -1,5 +1,13 @@
 #!/usr/bin/python
 
+'''
+
+This file is not working currently
+
+Please do not use this file as it is not working currently at this time
+
+'''
+
 import binascii
 import socket
 from impacket import smb
