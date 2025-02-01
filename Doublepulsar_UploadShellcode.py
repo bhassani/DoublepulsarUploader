@@ -139,6 +139,22 @@ def int2le(integer, pad):
         return '\x00'
     return ''.join(buf)
 
+#converted with chatgpt
+def int_to_le(data: int) -> bytes:
+    b = bytearray(4)
+    b[0] = data & 0xFF
+    b[1] = (data >> 8) & 0xFF
+    b[2] = (data >> 16) & 0xFF
+    b[3] = (data >> 24) & 0xFF
+    return bytes(b)
+'''
+# Test the function
+data = 0x12345678
+result = int_to_le(data)
+print(result)  # Output: b'xV4\x12'
+print("Bytes: ", " ".join(f"{byte:02X}" for byte in result))
+'''
+
 if __name__ == "__main__":
 
     # Packets
