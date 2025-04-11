@@ -1,5 +1,33 @@
 #more functions that we might need
 
+def hexdump(data, length=16):
+    """
+    Prints a classic hexdump of the given data.
+    
+    :param data: The bytes or bytearray to dump.
+    :param length: Number of bytes per line.
+    """
+    if not isinstance(data, (bytes, bytearray)):
+        raise TypeError("Input data must be bytes or bytearray.")
+    
+    for i in range(0, len(data), length):
+        chunk = data[i:i+length]
+        
+        # Hex representation
+        hex_bytes = ' '.join(f"{b:02x}" for b in chunk)
+        
+        # Make two blocks of 8 bytes for readability
+        hex_bytes = '  '.join([hex_bytes[:24], hex_bytes[24:]]) if len(chunk) > 8 else hex_bytes
+        
+        # ASCII representation
+        ascii_bytes = ''.join((chr(b) if 32 <= b <= 126 else '.') for b in chunk)
+        
+        print(f"{i:08x}  {hex_bytes:<48}  {ascii_bytes}")
+
+
+
+
+
 def test_shellcode_builder():
     kernel_shellcode = "\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
     kernel_shellcode += "\xFF\x89\x53\x04\x89\x03\x48\x8D\x05\x0A\x00\x00\x00\x48\x89\xC2"
