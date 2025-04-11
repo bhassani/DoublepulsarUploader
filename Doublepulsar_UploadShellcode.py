@@ -363,13 +363,13 @@ if __name__ == "__main__":
 
         #0x52
         if smb_response[34] == 82:
-	        print("Doublepulsar returned:  Success!\n)
+	        print("Doublepulsar returned:  Success!\n")
         #0x62
         elif smb_response[34] == 98:
-	        print("Doublepulsar returned:  Invalid parameters!\n)
+	        print("Doublepulsar returned:  Invalid parameters!\n")
         #0x72
         elif smb_response[34] == 114:
-	        print("Doublepulsar returned:  Allocation failure!\n)
+	        print("Doublepulsar returned:  Allocation failure!\n")
         else:
 	        print("Doublepulsar didn't succeed\n")
          
