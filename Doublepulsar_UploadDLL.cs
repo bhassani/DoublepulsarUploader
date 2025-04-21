@@ -1172,6 +1172,12 @@ namespace DoublePulsar
                          * since we did not use the SendSMBMessage -> ReceiveSMBMessage becomes useless
                          */
 
+			//DoublePulsar response: STATUS_NOT_IMPLEMENTED
+			if (recv_buffer[9] == 0x02 && recv_buffer[10] == 0x00 && recv_buffer[11] == 0x00 && recv_buffer[12] == 0xc0)
+			{
+			    System.Console.WriteLine("[{ip}] DoublePulsar returned: 0xC0000002 - STATUS_NOT_IMPLEMENTED!\n");
+			}
+			    
                         if (recv_buffer[34] == 0x52)
                         {
                             System.Console.WriteLine($"[{ip}] DOUBLEPULSAR - Returned {recv_buffer[34]}.  SUCCESS!");
