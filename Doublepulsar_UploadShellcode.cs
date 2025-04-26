@@ -844,7 +844,10 @@ namespace DoublePulsar
                 byte[] signature = Slice(pingrequestresponse, 14, 4);
                 UInt32 signature_long = LE2INT(signature);
                 UInt32 key = calculate_doublepulsar_xor_key(signature_long);
-                string arch = calculate_doublepulsar_arch(signature_long);
+                //string arch = calculate_doublepulsar_arch(signature_long);
+                ulong archSignature = BitConverter.ToUInt64(pingrequestresponse, 18);
+                string arch = calculate_doublepulsar_arch(archSignature);
+
 
                 Console.WriteLine($"DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: 0x{key,4:X}");
 
