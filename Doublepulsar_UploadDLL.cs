@@ -729,7 +729,9 @@ namespace DoublePulsar
 		//using this method instead of the full 8 bytes because LE2INT cannot handle more than 4 bytes
                 byte[] arch_signature = Slice(pingrequestresponse, 18, 4);
 		UInt32 archbytes_long = LE2INT(arch_signature);
-		string arch = calculate_doublepulsar_arch(archbytes_long);
+		//string arch = calculate_doublepulsar_arch(signature_long);
+                ulong archSignature = BitConverter.ToUInt64(pingrequestresponse, 18);
+                string arch = calculate_doublepulsar_arch(archSignature);
                 
                 Console.WriteLine($"DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: {arch}, XOR Key: 0x{key,4:X}");
 
