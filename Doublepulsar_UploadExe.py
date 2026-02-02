@@ -32,9 +32,9 @@ def read_launcher_file_as_hex():
         print('File size: {:d}'.format(len(data)))
     return data
 
-def read_dll_file_as_hex():
+def read_exe_file_as_hex():
     global hex
-    print("reading DLL into memory!")
+    print("reading executable into memory!")
     with open(FILE_LOCATION, "rb") as f:
         data = f.read()
         hex = binascii.hexlify(data)
@@ -426,9 +426,8 @@ if __name__ == "__main__":
             print("Invalid input.")
             exit()
         
-
         launcher_dll = read_launcher_file_as_hex()
-        exe_bytes = read_dll_file_as_hex()
+        exe_bytes = read_exe_file_as_hex()
         print('launcher file size: {:d}'.format(len(launcher_dll)))
         print('Exe File size: {:d}'.format(len(exe_bytes)))
         launcher_dll_size = len(launcher_dll)
